@@ -42,7 +42,7 @@ func TestConfigInheritance(t *testing.T) {
 		},
 	}
 
-	cfg := api.GetActionConfig("mockSvc.subSvc.doAction")
+	cfg, _ := api.GetActionConfig("mockSvc.subSvc.doAction")
 	if cfg == nil {
 		t.Fatal("config not found")
 	}
@@ -71,7 +71,7 @@ func TestConfigInheritance(t *testing.T) {
 // =========================================================================
 func TestBuiltinSigners(t *testing.T) {
 	// 测试 Basic 签名器
-	req := &api.HttpRequest{Headers: make(map[string]string)}
+	req := &api.HttpRequest{}
 	config := map[string]any{
 		"username": "admin",
 		"password": "123",
@@ -84,12 +84,12 @@ func TestBuiltinSigners(t *testing.T) {
 		t.Fatal(err)
 	}
 	expected := "Basic " + encoding.Base64ToString([]byte("admin:123"))
-	if req.Headers["Authorization"] != expected {
-		t.Errorf("expected %s, got %s", expected, req.Headers["Authorization"])
+	if req.GetHeader("Authorization") != expected {
+		t.Errorf("expected %s, got %s", expected, req.GetHeader("Authorization"))
 	}
 
 	// 测试 Bearer 签名器
-	req = &api.HttpRequest{Headers: make(map[string]string)}
+	req = &api.HttpRequest{}
 	config = map[string]any{
 		"token": "secret-token",
 	}
@@ -98,8 +98,8 @@ func TestBuiltinSigners(t *testing.T) {
 		t.Fatal("bearer signer not found")
 	}
 	signer.Sign(req, config)
-	if req.Headers["Authorization"] != "Bearer secret-token" {
-		t.Errorf("expected Bearer secret-token, got %s", req.Headers["Authorization"])
+	if req.GetHeader("Authorization") != "Bearer secret-token" {
+		t.Errorf("expected Bearer secret-token, got %s", req.GetHeader("Authorization"))
 	}
 }
 
@@ -120,7 +120,7 @@ func (s *mockExtSigner) Sign(req *api.HttpRequest, rawConfig map[string]any) err
 	}
 
 	// 添加模拟签名
-	req.Headers["Authorization"] = "Mock-Signature-Pass"
+	req.SetHeader("Authorization", "Mock-Signature-Pass")
 	return nil
 }
 
@@ -241,7 +241,7 @@ func BenchmarkCallEngineLogic(b *testing.B) {
 		},
 	}
 
-	actionConfig := api.GetActionConfig("benchPlatform")
+	actionConfig, _ := api.GetActionConfig("benchPlatform")
 
 	b.ResetTimer()
 	b.ReportAllocs()
@@ -251,6 +251,6 @@ func BenchmarkCallEngineLogic(b *testing.B) {
 		// 这里由于 fill 仅限于 package 内部，我们不能直接调 fill()，
 		// 但我们实际上想衡量的是整个准备流程。
 		// 由于 Call 会触发网络，这里只压测 GetActionConfig (最核心合并解析逻辑)
-		_ = api.GetActionConfig("mockPlatform.mockAction")
+		_, _ = api.GetActionConfig("mockPlatform.mockAction")
 	}
 }

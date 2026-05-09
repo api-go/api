@@ -4,7 +4,34 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+
+	"apigo.cc/go/cast"
+	"apigo.cc/go/safe"
 )
+
+// GetStringOrSafe 从配置中安全地获取字符串值。如果是 SafeBuf，则返回明文副本及对应的清理函数
+func GetStringOrSafe(v any) (string, func()) {
+	if v == nil {
+		return "", func() {}
+	}
+	if sb, ok := v.(*safe.SafeBuf); ok {
+		p := sb.Open()
+		return p.String(), p.Close
+	}
+	return cast.String(v), func() {}
+}
+
+// GetBytesOrSafe 从配置中安全地获取字节切片。如果是 SafeBuf，则返回明文副本及对应的清理函数
+func GetBytesOrSafe(v any) ([]byte, func()) {
+	if v == nil {
+		return nil, func() {}
+	}
+	if sb, ok := v.(*safe.SafeBuf); ok {
+		p := sb.Open()
+		return p.Data, p.Close
+	}
+	return []byte(cast.String(v)), func() {}
+}
 
 // ExportGoStructs 根据全局配置生成 Go 结构体代码
 func ExportGoStructs(packageName string) string {

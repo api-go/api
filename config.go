@@ -9,6 +9,7 @@ import (
 	"apigo.cc/go/config"
 	"apigo.cc/go/crypto"
 	"apigo.cc/go/encoding"
+	"apigo.cc/go/safe"
 )
 
 var confAes, _ = crypto.NewAESGCMAndEraseKey([]byte("?GQ$0K0GgLdO=f+~L68PLm$uhKr4'=tV"), []byte("VFs7@sK61cj^f?HZ"))
@@ -47,8 +48,8 @@ func Load(name string) error {
 	return nil
 }
 
-// GetActionConfig 获取某个动作经过层级合并后的完整配置
-func GetActionConfig(actionName string) map[string]any {
+// GetActionConfig 获取某个动作经过层级合并后的完整配置，返回配置图和需要手动关闭的 SafeBuf 列表
+func GetActionConfig(actionName string) (map[string]any, []*safe.SafeBuf) {
 	configMutex.RLock()
 	defer configMutex.RUnlock()
 
@@ -58,7 +59,7 @@ func GetActionConfig(actionName string) map[string]any {
 	// 1. 获取 api 根节点
 	curr, ok := GlobalConfigs["api"].(map[string]any)
 	if !ok {
-		return res
+		return res, nil
 	}
 
 	// 2. 逐级导航并合并
@@ -79,8 +80,8 @@ func GetActionConfig(actionName string) map[string]any {
 		}
 	}
 
-	decryptMap(res)
-	return res
+	safeBufs := decryptMap(res)
+	return res, safeBufs
 }
 
 // fill 注入配置到 Action，非破坏性，仅注入零值
@@ -104,6 +105,12 @@ func fill(action any, actionConfig map[string]any) {
 
 			fieldName := t.Field(i).Name
 			if val, ok := findConfigValue(actionConfig, fieldName); ok {
+				// 如果目标是 string 但值是 SafeBuf，默认不注入以防泄露，除非手动处理
+				if f.Kind() == reflect.String {
+					if _, isSafe := val.(*safe.SafeBuf); isSafe {
+						continue
+					}
+				}
 				cast.Convert(f.Addr().Interface(), val)
 			}
 		}
@@ -171,22 +178,27 @@ func MergeMap(dst, src map[string]any) {
 	}
 }
 
-func decryptMap(m map[string]any) {
+func decryptMap(m map[string]any) []*safe.SafeBuf {
+	var safeBufs []*safe.SafeBuf
 	for k, v := range m {
 		if s, ok := v.(string); ok {
-			if b64, err := encoding.UnUrlBase64FromString(s); err == nil {
+			var b64 []byte
+			var err error
+			if b64, err = encoding.UnUrlBase64FromString(s); err != nil {
+				b64, err = encoding.UnBase64FromString(s)
+			}
+
+			if err == nil && len(b64) > 0 {
 				if dec, err := confAes.DecryptBytes(b64); err == nil {
-					m[k] = string(dec)
+					sb := safe.NewSafeBufAndErase(dec)
+					m[k] = sb
+					safeBufs = append(safeBufs, sb)
 					continue
 				}
 			}
-			if b64, err := encoding.UnBase64FromString(s); err == nil {
-				if dec, err := confAes.DecryptBytes(b64); err == nil {
-					m[k] = string(dec)
-				}
-			}
 		} else if subMap, ok := v.(map[string]any); ok {
-			decryptMap(subMap)
+			safeBufs = append(safeBufs, decryptMap(subMap)...)
 		}
 	}
+	return safeBufs
 }

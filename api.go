@@ -6,16 +6,32 @@ import (
 
 	"apigo.cc/go/cast"
 	"apigo.cc/go/http"
+	"apigo.cc/go/safe"
 )
 
 // Call 是调度引擎的入口
 func Call[T any](action Action) (*T, error) {
 	// 1. 获取并合并配置
-	actionConfig := map[string]any{}
+	actionConfig, safeBufs := GetActionConfig(action.ActionName())
+	defer func() {
+		for _, sb := range safeBufs {
+			sb.Close()
+		}
+	}()
+
 	if ca, ok := action.(ConfigurableAction); ok {
 		MergeMap(actionConfig, ca.Config())
 	}
-	MergeMap(actionConfig, GetActionConfig(action.ActionName()))
+
+	// 1.5 预处理配置：自动 Open 所有 SafeBuf 变为临时的 SecretPlaintext
+	// 这样 Signer 可以直接使用这些值，且在 defer 中会被自动回收
+	var openedSecrets []*safe.SecretPlaintext
+	preprocessSecrets(actionConfig, &openedSecrets)
+	defer func() {
+		for _, secret := range openedSecrets {
+			secret.Close()
+		}
+	}()
 
 	// 2. 业务自校验
 	if va, ok := action.(ValidatableAction); ok {
@@ -51,14 +67,14 @@ func Call[T any](action Action) (*T, error) {
 	httpReq := &HttpRequest{
 		Url:     url,
 		Method:  strings.ToUpper(method),
-		Headers: make(map[string]string),
 		Payload: action,
 	}
+	defer httpReq.Close()
 
 	// 合并默认 Header
 	if headers, ok := actionConfig["headers"].(map[string]any); ok {
 		for k, v := range headers {
-			httpReq.Headers[k] = cast.String(v)
+			httpReq.SetHeader(k, v)
 		}
 	}
 
@@ -73,7 +89,7 @@ func Call[T any](action Action) (*T, error) {
 	timeout := cast.Duration(actionConfig["timeout"])
 	client := http.NewClient(timeout)
 
-	res := client.Do(httpReq.Method, httpReq.Url, httpReq.Payload, headerSlice(httpReq.Headers)...)
+	res := client.Do(httpReq.Method, httpReq.Url, httpReq.Payload, headerSlice(httpReq)...)
 	if res.Error != nil {
 		return nil, res.Error
 	}
@@ -89,9 +105,21 @@ func Call[T any](action Action) (*T, error) {
 	return &response, nil
 }
 
-func headerSlice(headers map[string]string) []string {
-	res := make([]string, 0, len(headers)*2)
-	for k, v := range headers {
+func preprocessSecrets(m map[string]any, opened *[]*safe.SecretPlaintext) {
+	for k, v := range m {
+		if sb, ok := v.(*safe.SafeBuf); ok {
+			secret := sb.Open()
+			m[k] = secret
+			*opened = append(*opened, secret)
+		} else if subMap, ok := v.(map[string]any); ok {
+			preprocessSecrets(subMap, opened)
+		}
+	}
+}
+
+func headerSlice(req *HttpRequest) []string {
+	res := make([]string, 0, len(req.headers)*2)
+	for k, v := range req.headers {
 		res = append(res, k, v)
 	}
 	return res

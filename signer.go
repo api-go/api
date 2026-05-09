@@ -3,8 +3,7 @@ package api
 import (
 	"errors"
 
-	"apigo.cc/go/cast"
-	"apigo.cc/go/encoding"
+	"apigo.cc/go/safe"
 )
 
 // Signer 负责为请求附加签名信息
@@ -44,20 +43,18 @@ func sign(name string, req *HttpRequest, config map[string]any) error {
 type basicSigner struct{}
 
 func (s *basicSigner) Sign(req *HttpRequest, config map[string]any) error {
-	username := cast.String(config["username"])
-	password := cast.String(config["password"])
-	auth := username + ":" + password
-	req.Headers["Authorization"] = "Basic " + encoding.Base64ToString([]byte(auth))
+	req.SetHeader("Authorization", "Basic ", safe.Base64(config["username"], ":", config["password"]))
 	return nil
 }
 
 type bearerSigner struct{}
 
 func (s *bearerSigner) Sign(req *HttpRequest, config map[string]any) error {
-	token := cast.String(config["token"])
-	if token == "" {
-		token = cast.String(config["key"])
+	token := config["token"]
+	if token == nil {
+		token = config["key"]
 	}
-	req.Headers["Authorization"] = "Bearer " + token
+
+	req.SetHeader("Authorization", "Bearer ", token)
 	return nil
 }

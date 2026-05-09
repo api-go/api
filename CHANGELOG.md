@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## v1.0.3 (2026-05-09)
+
+### Security
+- **Frictionless Memory Safety**: introduced `HttpRequest.SetHeader(key, values...)` with automatic secret extraction and buffer tracking.
+- **Automated Lifecycle**: `api.Call` now automatically "Opens" all `SafeBuf` configuration values before calling Signers, and explicitly closes them via defer.
+- **Paradigm Signers**: refactored built-in signers to use naive, declarative syntax (`safe.Base64(safe.Concat(...))`) which leverages `SafeBuf` for encrypted intermediate states, preventing GC reliance.
+- **Ultimate Protection**: implemented post-hoc string erasure using `unsafe.String` over controlled buffers managed by a private `wipeableBuffers` list.
+- **Infrastructure Alignment**: aligned dependencies with `go/safe` v1.0.6, `go/http` v1.0.11, and `go/config` v1.0.7.
+
 ## v1.0.2 (2026-05-09)
 
 ### Changed

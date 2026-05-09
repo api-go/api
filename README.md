@@ -29,10 +29,13 @@ go get apigo.cc/go/api
 *   `URLAction` / `MethodAction`：动态指定 Endpoint 和 HTTP 方法。
 *   `ValidatableAction`：业务参数自校验。
 
-## 🔒 安全性
+## 🔒 安全性 (Ultimate Memory Safety)
 
 *   **内置解密**：支持自动识别并解密配置中的 AES 加密内容。
-*   **并发安全**：配置树操作受 `sync.RWMutex` 保护。
+*   **内存保护**：敏感配置解密后以 `safe.SafeBuf` 形式存储，防止内存 Dump 泄露。
+- **防止字符串泄露**：通过 `unsafe.String` 零拷贝技术，确保敏感 Header（如 Authorization）在调用结束后可被物理擦除，彻底解决 Go 字符串不可变性导致的堆泄露问题。
+- **全生命周期闭环**：`api.Call` 结束后自动触发 `httpReq.Close()`，对所有中间缓冲区进行 `ZeroMemory` 随机覆盖。
+- **安全辅助函数**：内置 `SetBasicAuth`, `SetBearerAuth` 等工具，强制执行无拼接的内存安全逻辑。
 
 ## 🧪 示例
 

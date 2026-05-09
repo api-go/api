@@ -16,6 +16,15 @@
 *   **占位符处理移交**：验证 `{{.service}}` 等 URL 模板变量能够被自定义的 Mock 签名器接管、解析并替换。
 *   **序列化与协议透传**：验证自动由 `http` 包进行 Payload 解析后的 JSON 数据流与 HTTP Method 和 Authentication Header 一致性。
 
+## 🛡️ 安全性验证 (Security Audit)
+
+### 4. 内存安全闭环与后置擦除 (`TestSafeConfigDecryption`, `TestFillSafeGuard`)
+验证敏感数据在内存中的全生命周期保护：
+*   **SafeBuf 自动转换**：所有解密后的配置字段强制转换为 `safe.SafeBuf`，有效防止内存 Dump。
+*   **后置字符串擦除**：验证通过 `unsafe.String` 传递给 `http.Header` 的敏感字符串，在 `httpReq.Close()` 后被物理覆盖（内容不再是原始密钥）。
+*   **注入保护 (Guard)**：敏感数据禁止自动注入 Action 的 `string` 字段，杜绝无意中的内存留存。
+*   **自动生命周期回收**：`api.Call` 结束时通过 `defer` 机制强制调用 `Close()` 擦除本次请求的所有明文密钥副本及 Header 缓冲区。
+
 ## ⏱ 性能基准测试 (Benchmark)
 
 使用 `go test -bench=. ./...` 评估框架调用阶段的开销。
