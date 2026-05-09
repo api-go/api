@@ -40,8 +40,8 @@ type HttpRequest struct {
 
 // Result 定义 API 调用的标准返回结果
 type Result struct {
-	StatusCode int               `json:"statusCode"`
-	Status     string            `json:"status"`
-	Headers    map[string]string `json:"headers"`
-	Data       any               `json:"data"`
+	StatusCode int
+	Status     string
+	Headers    map[string]string
+	Data       any
 }
