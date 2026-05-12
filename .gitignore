@@ -1,6 +1,8 @@
 .log.meta.json
-env.yml
-
 .ai/
-
 .geminiignore
+.gemini
+env.yml
+env.json
+env.yaml
+/CODE-FULL.md

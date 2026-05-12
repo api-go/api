@@ -14,7 +14,7 @@ func TestSafeConfigDecryption(t *testing.T) {
 	SetEncryptKeys(key, iv)
 
 	plaintext := "my-secret-password"
-	ciphertext, _ := confAes.EncryptBytes([]byte(plaintext))
+	ciphertext, _ := confAES.EncryptBytes([]byte(plaintext))
 	b64 := encoding.Base64ToString(ciphertext)
 
 	GlobalConfigs = map[string]any{

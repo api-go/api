@@ -12,8 +12,14 @@ import (
 	"apigo.cc/go/safe"
 )
 
-var confAes, _ = crypto.NewAESGCMAndEraseKey([]byte("?GQ$0K0GgLdO=f+~L68PLm$uhKr4'=tV"), []byte("VFs7@sK61cj^f?HZ"))
-var keysOnce = sync.Once{}
+var confAES *crypto.Symmetric
+
+func init() {
+	crypto.OnSetDefaultAES(func(aes *crypto.Symmetric) {
+		confAES = aes
+	})
+}
+
 var configMutex sync.RWMutex
 
 // GlobalConfigs 存储整棵配置树
@@ -21,12 +27,7 @@ var GlobalConfigs = map[string]any{}
 
 // SetEncryptKeys 允许设置自定义的配置加解密密钥
 func SetEncryptKeys(key, iv []byte) {
-	keysOnce.Do(func() {
-		if confAes != nil {
-			confAes.Close()
-		}
-		confAes, _ = crypto.NewAESGCMAndEraseKey(key, iv)
-	})
+	crypto.SetDefaultAES(key, iv)
 }
 
 // Load 加载指定的配置文件并合并到 GlobalConfigs
@@ -189,7 +190,7 @@ func decryptMap(m map[string]any) []*safe.SafeBuf {
 			}
 
 			if err == nil && len(b64) > 0 {
-				if dec, err := confAes.DecryptBytes(b64); err == nil {
+				if dec, err := confAES.DecryptBytes(b64); err == nil {
 					sb := safe.NewSafeBufAndErase(dec)
 					m[k] = sb
 					safeBufs = append(safeBufs, sb)
