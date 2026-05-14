@@ -3,7 +3,7 @@ module apigo.cc/go/api
 go 1.25.0
 
 require (
-	apigo.cc/go/cast v1.3.0
+	apigo.cc/go/cast v1.3.2
 	apigo.cc/go/config v1.3.0
 	apigo.cc/go/crypto v1.3.0
 	apigo.cc/go/encoding v1.3.0
