@@ -9,12 +9,13 @@ import (
 
 func init() {
 	jsmod.Register("api", map[string]any{
-		"call": CallAny,
-		"load": Load,
+		"call":      call,
+		"addConfig": AddConfig,
 	})
 }
 
-func CallAny(ctx context.Context, actionName string, payload any, options ...map[string]any) (any, error) {
+// call 提供给 JS 的私有入口，避免污染 Go 公开 API
+func call(ctx context.Context, actionName string, payload any, options ...map[string]any) (any, error) {
 	var opt map[string]any
 	if len(options) > 0 {
 		opt = options[0]
@@ -24,7 +25,7 @@ func CallAny(ctx context.Context, actionName string, payload any, options ...map
 		payload = make(map[string]any)
 	}
 
-	// 1. Pre-fill the payload from GlobalConfigs (manually doing what api.Call does later)
+	// 1. 预填 Payload (JS 传来的 map 需要手动触发一次 fill 以获取全局配置)
 	actionConfig, safeBufs := GetActionConfig(actionName)
 	defer func() {
 		for _, sb := range safeBufs {
@@ -33,7 +34,7 @@ func CallAny(ctx context.Context, actionName string, payload any, options ...map
 	}()
 	fill(payload, actionConfig)
 
-	// 2. Wrap into jsAction for interface satisfaction
+	// 2. 构造符合 Action 接口的私有包装器
 	ja := &jsAction{
 		name:    actionName,
 		payload: payload,
@@ -43,8 +44,6 @@ func CallAny(ctx context.Context, actionName string, payload any, options ...map
 	return Call[any](ja)
 }
 
-// jsAction implements Action, SignerAction, URLAction, MethodAction, and ConfigurableAction.
-// It redirects reflection-based 'fill' and 'json.Marshal' to its internal payload.
 type jsAction struct {
 	name    string
 	payload any
@@ -52,40 +51,17 @@ type jsAction struct {
 }
 
 func (a *jsAction) ActionName() string { return a.name }
-
 func (a *jsAction) SignerName() string {
 	if a.options != nil {
-		if s := cast.String(a.options["signer"]); s != "" {
-			return s
-		}
+		return cast.String(a.options["signer"])
 	}
 	return ""
 }
-
-func (a *jsAction) GetURL() string {
-	if a.options != nil {
-		if u := cast.String(a.options["url"]); u != "" {
-			return u
-		}
-	}
-	return ""
-}
-
-func (a *jsAction) GetMethod() string {
-	if a.options != nil {
-		if m := cast.String(a.options["method"]); m != "" {
-			return m
-		}
-	}
-	return ""
-}
-
+func (a *jsAction) GetURL() string    { return cast.String(a.options["url"]) }
+func (a *jsAction) GetMethod() string { return cast.String(a.options["method"]) }
 func (a *jsAction) Config() map[string]any {
 	return a.options
 }
-
-// MarshalJSON ensures that when this action is sent via HTTP (as JSON),
-// only the internal payload is sent, not the metadata fields.
 func (a *jsAction) MarshalJSON() ([]byte, error) {
 	return cast.ToJSONBytes(a.payload)
 }

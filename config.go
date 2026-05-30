@@ -30,6 +30,17 @@ func SetEncryptKeys(key, iv []byte) {
 	crypto.SetDefaultAES(key, iv)
 }
 
+// AddConfig 允许在内存中动态添加或覆盖配置，适用于从数据库或知识库加载配置的场景
+func AddConfig(name string, conf map[string]any) {
+	configMutex.Lock()
+	defer configMutex.Unlock()
+	if GlobalConfigs[name] == nil {
+		GlobalConfigs[name] = conf
+	} else if dst, ok := GlobalConfigs[name].(map[string]any); ok {
+		MergeMap(dst, conf)
+	}
+}
+
 // Load 加载指定的配置文件并合并到 GlobalConfigs
 func Load(name string) error {
 	if name == "" {
