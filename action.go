@@ -1,6 +1,7 @@
 package api
 
 import (
+	"reflect"
 	"unsafe"
 
 	"apigo.cc/go/cast"
@@ -35,6 +36,71 @@ type MethodAction interface {
 // ValidatableAction 定义支持自我校验的动作
 type ValidatableAction interface {
 	Validate() error
+}
+
+// FormatAction 定义请求体格式
+type FormatAction interface {
+	GetFormat() string // 返回: "json", "form", "multipart"
+}
+
+// ActionRegistry 存储已注册的 Action 模板或类型
+var actionRegistry = make(map[string]any)
+
+// RegisterAction 注册 API 动作。
+// definition 可以是一个结构体实例（用作类型模板）或一个 map[string]any（用作动态定义）。
+func RegisterAction(name string, definition any) {
+	if definition == nil {
+		return
+	}
+
+	t := reflect.TypeOf(definition)
+	for t.Kind() == reflect.Ptr {
+		t = t.Elem()
+	}
+
+	if t.Kind() == reflect.Struct {
+		actionRegistry[name] = t
+	} else if m, ok := definition.(map[string]any); ok {
+		ga := &GenericAction{
+			name:    name,
+			url:     cast.String(m["url"]),
+			method:  cast.String(m["method"]),
+			signer:  cast.String(m["signer"]),
+			format:  cast.String(m["format"]),
+			payload: make(map[string]any),
+		}
+		if p, ok := m["payload"].(map[string]any); ok {
+			ga.payload = p
+		}
+		actionRegistry[name] = ga
+	}
+}
+
+// GenericAction 是一个动态 Action 容器，实现了所有 API 相关接口
+type GenericAction struct {
+	name    string
+	url     string
+	method  string
+	signer  string
+	format  string
+	payload map[string]any
+}
+
+func (a *GenericAction) ActionName() string { return a.name }
+func (a *GenericAction) SignerName() string { return a.signer }
+func (a *GenericAction) GetURL() string     { return a.url }
+func (a *GenericAction) GetMethod() string  { return a.method }
+func (a *GenericAction) GetFormat() string  { return a.format }
+func (a *GenericAction) Config() map[string]any {
+	return map[string]any{
+		"url":    a.url,
+		"method": a.method,
+		"signer": a.signer,
+		"format": a.format,
+	}
+}
+func (a *GenericAction) MarshalJSON() ([]byte, error) {
+	return cast.ToJSONBytes(a.payload)
 }
 
 // HttpRequest 内部使用的请求描述结构，供 Signer 使用

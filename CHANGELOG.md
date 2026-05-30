@@ -1,9 +1,15 @@
 # CHANGELOG
 
-## v1.3.3 (2026-05-30)
-- **新增**: 注册到 `jsmod`，提供 `call` 和 `load` 能力。支持在 JS 环境中通过简洁的对象传参发起 API 编排调用。
+## v1.4.0 (2026-05-30)
+- **重大重构**: 引入数据驱动的 API 编排模式。
+- **新增**: `ActionRegistry` 支持注册 Go 结构体或 JSON 定义作为 API 模板。
+- **新增**: `CallBy(name, payload)` 动态调用入口，自动处理模板实例化与动态参数合并。
+- **新增**: `SetConfig` 支持内存配置热更新，并自动识别 `**` 前缀的加密字符串为 `SafeBuf`。
+- **新增**: 支持 `form` 和 `multipart` 请求格式。
+- **新增**: 跨语言签名支持，提供 `SetJSRunner` 钩子允许执行 JS 签名逻辑。
+- **JSMOD**: 注册 `call`, `setConfig`, `registerAction`, `registerSigner` 到 `jsmod`。
 
-## v1.0.3 (2026-05-09)
+## v1.3.3 (2026-05-30)
 
 ### Security
 - **Frictionless Memory Safety**: introduced `HttpRequest.SetHeader(key, values...)` with automatic secret extraction and buffer tracking.

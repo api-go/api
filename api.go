@@ -2,6 +2,7 @@ package api
 
 import (
 	"fmt"
+	"reflect"
 	"strings"
 
 	"apigo.cc/go/cast"
@@ -85,16 +86,31 @@ func Call[T any](action Action) (*T, error) {
 		}
 	}
 
-	// 7. 发起底层 HTTP 调用
+	// 7. 处理请求格式 (Form/Multipart)
+	payload := httpReq.Payload
+	if fa, ok := action.(FormatAction); ok {
+		switch strings.ToLower(fa.GetFormat()) {
+		case "form":
+			var f http.Form
+			cast.Convert(&f, payload)
+			payload = f
+		case "multipart":
+			var m http.Multipart
+			cast.Convert(&m, payload)
+			payload = m
+		}
+	}
+
+	// 8. 发起底层 HTTP 调用
 	timeout := cast.Duration(actionConfig["timeout"])
 	client := http.NewClient(timeout)
 
-	res := client.Do(httpReq.Method, httpReq.Url, httpReq.Payload, headerSlice(httpReq)...)
+	res := client.Do(httpReq.Method, httpReq.Url, payload, headerSlice(httpReq)...)
 	if res.Error != nil {
 		return nil, res.Error
 	}
 
-	// 8. 解析响应
+	// 9. 解析响应
 	var response T
 	if err := res.To(&response); err != nil {
 		var temp any
@@ -103,6 +119,51 @@ func Call[T any](action Action) (*T, error) {
 	}
 
 	return &response, nil
+}
+
+// CallBy 通过动作名称和动态 Payload 发起调用
+func CallBy[T any](name string, payload any) (*T, error) {
+	tmpl, ok := actionRegistry[name]
+	if !ok {
+		return nil, fmt.Errorf("action not found: %s", name)
+	}
+
+	var action Action
+	if t, ok := tmpl.(reflect.Type); ok {
+		// Go 结构体模式
+		inst := reflect.New(t).Interface()
+		if payload != nil {
+			cast.Convert(inst, payload)
+		}
+		action = inst.(Action)
+	} else if ga, ok := tmpl.(*GenericAction); ok {
+		// JSON 定义模式 (深拷贝模板以防并发冲突)
+		newGA := &GenericAction{
+			name:    ga.name,
+			url:     ga.url,
+			method:  ga.method,
+			signer:  ga.signer,
+			format:  ga.format,
+			payload: make(map[string]any),
+		}
+		// 复制模板 Payload
+		for k, v := range ga.payload {
+			newGA.payload[k] = v
+		}
+		// 合并动态 Payload
+		if payload != nil {
+			if m, ok := payload.(map[string]any); ok {
+				for k, v := range m {
+					newGA.payload[k] = v
+				}
+			} else {
+				cast.Convert(&newGA.payload, payload)
+			}
+		}
+		action = newGA
+	}
+
+	return Call[T](action)
 }
 
 func preprocessSecrets(m map[string]any, opened *[]*safe.SecretPlaintext) {

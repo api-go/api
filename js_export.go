@@ -3,65 +3,27 @@ package api
 import (
 	"context"
 
-	"apigo.cc/go/cast"
 	"apigo.cc/go/jsmod"
 )
 
 func init() {
 	jsmod.Register("api", map[string]any{
-		"call":      call,
-		"addConfig": AddConfig,
+		"call":           call,
+		"setConfig":      SetConfig,
+		"registerAction": RegisterAction,
+		"registerSigner": registerSigner,
 	})
 }
 
-// call 提供给 JS 的私有入口，避免污染 Go 公开 API
-func call(ctx context.Context, actionName string, payload any, options ...map[string]any) (any, error) {
-	var opt map[string]any
-	if len(options) > 0 {
-		opt = options[0]
-	}
-
-	if payload == nil {
-		payload = make(map[string]any)
-	}
-
-	// 1. 预填 Payload (JS 传来的 map 需要手动触发一次 fill 以获取全局配置)
-	actionConfig, safeBufs := GetActionConfig(actionName)
-	defer func() {
-		for _, sb := range safeBufs {
-			sb.Close()
-		}
-	}()
-	fill(payload, actionConfig)
-
-	// 2. 构造符合 Action 接口的私有包装器
-	ja := &jsAction{
-		name:    actionName,
-		payload: payload,
-		options: opt,
-	}
-
-	return Call[any](ja)
+// call 提供给 JS 的私有入口
+func call(ctx context.Context, name string, payload any) (any, error) {
+	// 注意：在低代码环境中，我们可能需要将 ctx 传入以透传追踪信息给 JS 签名器。
+	// 虽然 api.CallBy[any] 目前不接收 ctx，但底层的 jsRunner 钩子可以从 context 中获取信息。
+	// 如果未来 jsRunner 需要 ctx，我们可以在这里通过 context.WithValue 注入。
+	return CallBy[any](name, payload)
 }
 
-type jsAction struct {
-	name    string
-	payload any
-	options map[string]any
-}
-
-func (a *jsAction) ActionName() string { return a.name }
-func (a *jsAction) SignerName() string {
-	if a.options != nil {
-		return cast.String(a.options["signer"])
-	}
-	return ""
-}
-func (a *jsAction) GetURL() string    { return cast.String(a.options["url"]) }
-func (a *jsAction) GetMethod() string { return cast.String(a.options["method"]) }
-func (a *jsAction) Config() map[string]any {
-	return a.options
-}
-func (a *jsAction) MarshalJSON() ([]byte, error) {
-	return cast.ToJSONBytes(a.payload)
+// registerSigner 允许从 JS 注册动态签名逻辑
+func registerSigner(name string, code string) {
+	RegisterSigner(name, &jsSigner{code: code})
 }

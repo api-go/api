@@ -30,16 +30,26 @@ func SetEncryptKeys(key, iv []byte) {
 	crypto.SetDefaultAES(key, iv)
 }
 
-// AddConfig 允许在内存中动态添加或覆盖配置，适用于从数据库或知识库加载配置的场景
-func AddConfig(name string, conf map[string]any) {
+// SetConfig 允许在内存中动态添加或覆盖配置，适用于从数据库或知识库加载配置的场景。
+// 它会自动扫描 map 中的字符串，识别并解密以 "**" 开头的加密内容并转换为 SafeBuf。
+func SetConfig(name string, conf map[string]any) {
 	configMutex.Lock()
 	defer configMutex.Unlock()
+
+	// 1. 扫描并自动解密敏感数据
+	decryptMapWithPrefix(conf)
+	// 注意：解密出的 SafeBufs 是常驻内存的配置，由 GlobalConfigs 持有，不需要立即关闭
+
+	// 2. 合并到全局树
 	if GlobalConfigs[name] == nil {
 		GlobalConfigs[name] = conf
 	} else if dst, ok := GlobalConfigs[name].(map[string]any); ok {
 		MergeMap(dst, conf)
 	}
 }
+
+// AddConfig 是 SetConfig 的兼容性别名
+func AddConfig(name string, conf map[string]any) { SetConfig(name, conf) }
 
 // Load 加载指定的配置文件并合并到 GlobalConfigs
 func Load(name string) error {
@@ -52,11 +62,7 @@ func Load(name string) error {
 		return err
 	}
 
-	configMutex.Lock()
-	defer configMutex.Unlock()
-
-	// 合并到全局树
-	MergeMap(GlobalConfigs, conf)
+	SetConfig(name, conf)
 	return nil
 }
 
@@ -71,7 +77,8 @@ func GetActionConfig(actionName string) (map[string]any, []*safe.SafeBuf) {
 	// 1. 获取 api 根节点
 	curr, ok := GlobalConfigs["api"].(map[string]any)
 	if !ok {
-		return res, nil
+		// 尝试直接从根开始找
+		curr = GlobalConfigs
 	}
 
 	// 2. 逐级导航并合并
@@ -92,6 +99,7 @@ func GetActionConfig(actionName string) (map[string]any, []*safe.SafeBuf) {
 		}
 	}
 
+	// 这里的解密主要是为了处理文件中加载的 ENC() 格式 (兼容旧版)
 	safeBufs := decryptMap(res)
 	return res, safeBufs
 }
@@ -99,6 +107,19 @@ func GetActionConfig(actionName string) (map[string]any, []*safe.SafeBuf) {
 // fill 注入配置到 Action，非破坏性，仅注入零值
 func fill(action any, actionConfig map[string]any) {
 	if action == nil || actionConfig == nil {
+		return
+	}
+
+	if ga, ok := action.(*GenericAction); ok {
+		// 对于通用动作，将配置合并到 payload map 中（仅合并 payload 不存在的 key）
+		for k, v := range actionConfig {
+			if k == "url" || k == "method" || k == "signer" || k == "format" || k == "headers" || k == "timeout" {
+				continue
+			}
+			if _, exists := ga.payload[k]; !exists {
+				ga.payload[k] = v
+			}
+		}
 		return
 	}
 
@@ -190,14 +211,46 @@ func MergeMap(dst, src map[string]any) {
 	}
 }
 
+func decryptMapWithPrefix(m map[string]any) []*safe.SafeBuf {
+	var safeBufs []*safe.SafeBuf
+	for k, v := range m {
+		if s, ok := v.(string); ok && strings.HasPrefix(s, "**") {
+			raw := s[2:]
+			var b64 []byte
+			var err error
+			if b64, err = encoding.UnUrlBase64FromString(raw); err != nil {
+				b64, err = encoding.UnBase64FromString(raw)
+			}
+
+			if err == nil && len(b64) > 0 {
+				if dec, err := confAES.DecryptBytes(b64); err == nil {
+					sb := safe.NewSafeBufAndErase(dec)
+					m[k] = sb
+					safeBufs = append(safeBufs, sb)
+					continue
+				}
+			}
+		} else if subMap, ok := v.(map[string]any); ok {
+			safeBufs = append(safeBufs, decryptMapWithPrefix(subMap)...)
+		}
+	}
+	return safeBufs
+}
+
 func decryptMap(m map[string]any) []*safe.SafeBuf {
 	var safeBufs []*safe.SafeBuf
 	for k, v := range m {
 		if s, ok := v.(string); ok {
 			var b64 []byte
 			var err error
-			if b64, err = encoding.UnUrlBase64FromString(s); err != nil {
-				b64, err = encoding.UnBase64FromString(s)
+			// 兼容旧版 ENC(...) 格式扫描
+			inner := s
+			if strings.HasPrefix(s, "ENC(") && strings.HasSuffix(s, ")") {
+				inner = s[4 : len(s)-1]
+			}
+
+			if b64, err = encoding.UnUrlBase64FromString(inner); err != nil {
+				b64, err = encoding.UnBase64FromString(inner)
 			}
 
 			if err == nil && len(b64) > 0 {
