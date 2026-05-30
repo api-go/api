@@ -8,6 +8,7 @@ require (
 	apigo.cc/go/crypto v1.3.1
 	apigo.cc/go/encoding v1.3.1
 	apigo.cc/go/http v1.3.2
+	apigo.cc/go/jsmod v1.0.1
 	apigo.cc/go/safe v1.3.1
 )
 
