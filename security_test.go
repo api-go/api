@@ -15,7 +15,7 @@ func TestSafeConfigDecryption(t *testing.T) {
 
 	plaintext := "my-secret-password"
 	ciphertext, _ := confAES.EncryptBytes([]byte(plaintext))
-	b64 := encoding.Base64ToString(ciphertext)
+	b64 := encoding.Base64(ciphertext)
 
 	GlobalConfigs = map[string]any{
 		"api": map[string]any{
@@ -51,7 +51,7 @@ func TestSafeConfigDecryption(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	expectedAuth := "Basic " + encoding.Base64ToString([]byte("admin:"+plaintext))
+	expectedAuth := "Basic " + encoding.Base64([]byte("admin:"+plaintext))
 	if req.GetHeader("Authorization") != expectedAuth {
 		t.Errorf("expected %s, got %s", expectedAuth, req.GetHeader("Authorization"))
 	}
