@@ -218,8 +218,8 @@ func decryptMapWithPrefix(m map[string]any) []*safe.SafeBuf {
 			raw := s[2:]
 			var b64 []byte
 			var err error
-			if b64, err = encoding.UnUrlBase64FromString(raw); err != nil {
-				b64, err = encoding.UnBase64FromString(raw)
+			if b64, err = encoding.UnURLBase64(raw); err != nil {
+				b64, err = encoding.UnBase64(raw)
 			}
 
 			if err == nil && len(b64) > 0 {
@@ -249,8 +249,8 @@ func decryptMap(m map[string]any) []*safe.SafeBuf {
 				inner = s[4 : len(s)-1]
 			}
 
-			if b64, err = encoding.UnUrlBase64FromString(inner); err != nil {
-				b64, err = encoding.UnBase64FromString(inner)
+			if b64, err = encoding.UnURLBase64(inner); err != nil {
+				b64, err = encoding.UnBase64(inner)
 			}
 
 			if err == nil && len(b64) > 0 {

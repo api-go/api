@@ -83,7 +83,7 @@ func TestBuiltinSigners(t *testing.T) {
 	if err := signer.Sign(req, config); err != nil {
 		t.Fatal(err)
 	}
-	expected := "Basic " + encoding.Base64ToString([]byte("admin:123"))
+	expected := "Basic " + encoding.Base64([]byte("admin:123"))
 	if req.GetHeader("Authorization") != expected {
 		t.Errorf("expected %s, got %s", expected, req.GetHeader("Authorization"))
 	}
