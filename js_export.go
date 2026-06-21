@@ -18,7 +18,11 @@ func init() {
 // call 提供给 JS 的私有入口
 func call(ctx context.Context, name string, payload any) (any, error) {
 	// 将 ctx 传入以透传追踪信息给 JS 签名器
-	return CallBy[any](name, payload)
+	res, err := CallBy[any](name, payload)
+	if err != nil {
+		return nil, jsmod.MakeError(err)
+	}
+	return res, nil
 }
 
 // registerSigner 允许从 JS 注册动态签名逻辑
