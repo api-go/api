@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## v1.5.7 (2026-08-17)
+- **低代码结果投影**: 动态 Action 可通过 `resultMode: data` 让 JavaScript `api.Call` 直接返回业务数据，并补齐 `ok/code/error`。
+- **继承一致性**: 结果投影读取完整的 Action 继承配置，子 Action 无需重复声明。
+- **兼容边界**: Go `Call`/`CallBy` 与未配置该选项的 JavaScript Action 均保持原有完整 `Result` 行为。
+
 ## v1.5.6 (2026-08-17)
 - **统一调用结果**: `Call` 与 `CallBy` 返回 `ok/statusCode/headers/data/code/error`，支持响应错误字段和成功码规则。
 - **调用选项**: 新增 Token 验证、超时、配置覆盖与敏感/控制字段覆盖保护。

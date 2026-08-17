@@ -35,11 +35,15 @@
 
 验证 `extends` 深度继承、父 Action 热解析、循环和缺失父项报错，以及 `filters: []` 同时收到请求与响应事件。JavaScript Filter 的中文流片段按 UTF-8 字符串传递。
 
+### 8. JavaScript 业务结果投影 (`TestProjectDataResult`, `TestActionUsesInheritedDataResult`)
+
+验证 `resultMode: data` 仅向 JavaScript 返回业务数据与 `ok/code/error`，不会泄露 HTTP Headers；同时验证子 Action 能继承父 Action 的投影策略。
+
 ## ⏱ 性能基准测试 (Benchmark)
 
 使用 `go test -bench=. ./...` 评估框架调用阶段的开销。
 > **基准**: Darwin / Apple M3 Max
-*   `BenchmarkCallEngineLogic-16`：约 **118.9 ns/op**, **2 allocs/op**。
+*   `BenchmarkCallEngineLogic-16`：约 **115.4 ns/op**, **80 B/op**, **2 allocs/op**。
 该指标证明引擎的参数合并、注入及校验流程具有极高的运行效率和极小的内存逃逸。
 
 ## 🚀 运行测试

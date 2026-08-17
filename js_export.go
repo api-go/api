@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 
+	"apigo.cc/go/cast"
 	"apigo.cc/go/jsmod"
 )
 
@@ -22,6 +23,9 @@ func call(ctx context.Context, name string, payload any, options ...*CallOptions
 	opts := firstOptions(options)
 	opts.Context = ctx
 	res, err := CallBy(name, payload, opts)
+	if actionUsesDataResult(name) {
+		return projectDataResult(res), nil
+	}
 	if err != nil {
 		if res != nil {
 			return res, nil
@@ -29,6 +33,33 @@ func call(ctx context.Context, name string, payload any, options ...*CallOptions
 		return nil, jsmod.MakeError(err)
 	}
 	return res, nil
+}
+
+func actionUsesDataResult(name string) bool {
+	config, err := resolveGenericActionConfig(name, map[string]bool{})
+	return err == nil && cast.String(config["resultMode"]) == "data"
+}
+
+func projectDataResult(result *Result) any {
+	if result == nil {
+		return map[string]any{"ok": false, "code": "", "error": "empty API result"}
+	}
+	if data, ok := result.Data.(map[string]any); ok {
+		output := cloneMap(data)
+		if _, exists := output["ok"]; !exists {
+			output["ok"] = result.Ok
+		}
+		if _, exists := output["code"]; !exists {
+			output["code"] = result.Code
+		}
+		if _, exists := output["error"]; !exists {
+			output["error"] = result.Error
+		}
+		return output
+	}
+	return map[string]any{
+		"ok": result.Ok, "code": result.Code, "error": result.Error, "result": result.Data,
+	}
 }
 
 // registerSigner 允许从 JS 注册动态签名逻辑

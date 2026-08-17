@@ -80,5 +80,7 @@ Action 只使用 `filters: ["name"]` 这一种形式。每个 Filter 都会收�
 
 动态 Action 可通过 `extends` 继承另一个 Action；父配置先合并，子配置深度覆盖。继承在每次调用时解析，因此父 Action 热更新会立即作用于子 Action。循环继承或不存在的父 Action 会直接返回错误。
 
+面向 JavaScript 低代码调用时，Action 可配置 `resultMode: data`，使 `api.Call` 直接返回业务 `data`，并保留顶层 `ok/code/error`，避免 HTTP 状态和响应头干扰应用逻辑。该配置支持 `extends` 继承，只影响 JavaScript 导出；Go 的 `Call` 与 `CallBy` 始终返回完整 `Result`。
+
 ---
 更多详情请参阅 [TEST.md](./TEST.md) 和 [CHANGELOG.md](./CHANGELOG.md)。
