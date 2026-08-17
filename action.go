@@ -1,7 +1,9 @@
 package api
 
 import (
+	"context"
 	"reflect"
+	"sync"
 	"unsafe"
 
 	"apigo.cc/go/cast"
@@ -45,6 +47,7 @@ type FormatAction interface {
 
 // ActionRegistry 存储已注册的 Action 模板或类型
 var actionRegistry = make(map[string]any)
+var actionRegistryMutex sync.RWMutex
 
 // RegisterAction 注册 API 动作。
 // definition 可以是一个结构体实例（用作类型模板）或一个 map[string]any（用作动态定义）。
@@ -59,52 +62,57 @@ func RegisterAction(name string, definition any) {
 	}
 
 	if t.Kind() == reflect.Struct {
+		actionRegistryMutex.Lock()
 		actionRegistry[name] = t
+		actionRegistryMutex.Unlock()
 	} else if m, ok := definition.(map[string]any); ok {
+		config := cloneMap(m)
+		decryptMapWithPrefix(config)
 		ga := &GenericAction{
-			name:    name,
-			url:     cast.String(m["url"]),
-			method:  cast.String(m["method"]),
-			signer:  cast.String(m["signer"]),
-			format:  cast.String(m["format"]),
-			payload: make(map[string]any),
+			name: name, config: config, payload: make(map[string]any),
 		}
 		if p, ok := m["payload"].(map[string]any); ok {
 			ga.payload = p
 		}
+		actionRegistryMutex.Lock()
+		if previous, ok := actionRegistry[name].(*GenericAction); ok {
+			closeSecrets(previous.config)
+		}
 		actionRegistry[name] = ga
+		actionRegistryMutex.Unlock()
 	}
+}
+
+// RemoveAction unregisters a dynamic Action.
+func RemoveAction(name string) {
+	actionRegistryMutex.Lock()
+	if previous, ok := actionRegistry[name].(*GenericAction); ok {
+		closeSecrets(previous.config)
+	}
+	delete(actionRegistry, name)
+	actionRegistryMutex.Unlock()
 }
 
 // GenericAction 是一个动态 Action 容器，实现了所有 API 相关接口
 type GenericAction struct {
 	name    string
-	url     string
-	method  string
-	signer  string
-	format  string
+	config  map[string]any
 	payload map[string]any
 }
 
-func (a *GenericAction) ActionName() string { return a.name }
-func (a *GenericAction) SignerName() string { return a.signer }
-func (a *GenericAction) GetURL() string     { return a.url }
-func (a *GenericAction) GetMethod() string  { return a.method }
-func (a *GenericAction) GetFormat() string  { return a.format }
-func (a *GenericAction) Config() map[string]any {
-	return map[string]any{
-		"url":    a.url,
-		"method": a.method,
-		"signer": a.signer,
-		"format": a.format,
-	}
-}
+func (a *GenericAction) ActionName() string     { return a.name }
+func (a *GenericAction) SignerName() string     { return cast.String(a.config["signer"]) }
+func (a *GenericAction) GetURL() string         { return cast.String(a.config["url"]) }
+func (a *GenericAction) GetMethod() string      { return cast.String(a.config["method"]) }
+func (a *GenericAction) GetFormat() string      { return cast.String(a.config["format"]) }
+func (a *GenericAction) Config() map[string]any { return cloneMap(a.config) }
 func (a *GenericAction) MarshalJSON() ([]byte, error) {
 	return cast.ToJSONBytes(a.payload)
 }
 
 // HttpRequest 内部使用的请求描述结构，供 Signer 使用
 type HttpRequest struct {
+	Context         context.Context
 	Url             string
 	Method          string
 	headers         map[string]string
@@ -210,8 +218,11 @@ func (r *HttpRequest) SetHeader(key string, values ...any) {
 
 // Result 定义 API 调用的标准返回结果
 type Result struct {
-	StatusCode int
-	Status     string
-	Headers    map[string]string
-	Data       any
+	Ok            bool
+	StatusCode    int
+	Headers       map[string]string
+	Data          any
+	Code          string
+	Error         string
+	receivedBytes int64
 }

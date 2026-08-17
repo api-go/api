@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"apigo.cc/go/api"
+	"apigo.cc/go/cast"
 	"apigo.cc/go/encoding"
 )
 
@@ -189,7 +190,7 @@ func TestFullCallFlow(t *testing.T) {
 	}
 
 	// 执行调度调用
-	resp, err := api.Call[MockResponse](action)
+	resp, err := api.Call(action)
 	if err != nil {
 		t.Fatalf("Call failed: %v", err)
 	}
@@ -206,7 +207,9 @@ func TestFullCallFlow(t *testing.T) {
 	}
 
 	// 2. 验证响应绑定
-	if resp.Status != "success" || resp.Echo != "Hello from mock server" {
+	var response MockResponse
+	cast.Convert(&response, resp.Data)
+	if response.Status != "success" || response.Echo != "Hello from mock server" {
 		t.Errorf("Response bind failed, got %+v", resp)
 	}
 

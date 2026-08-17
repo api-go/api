@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## v1.5.6 (2026-08-17)
+- **统一调用结果**: `Call` 与 `CallBy` 返回 `ok/statusCode/headers/data/code/error`，支持响应错误字段和成功码规则。
+- **调用选项**: 新增 Token 验证、超时、配置覆盖与敏感/控制字段覆盖保护。
+- **流式能力**: 基于 `go/http.ManualDo` 增加同步 Headers/Data/Done 回调，支持 JS 低代码向下游响应透传。
+- **动态管理**: 增加 Action 与 JavaScript Signer 的注册、替换和移除能力。
+- **统一 Filter 管线**: Action 仅配置有序 `filters: []`；同一 Filter 实例按 `request/headers/chunk/result/done` 事件处理调用全生命周期，并提供逐调用隔离状态。
+- **安全配置**: 密文格式收敛为 `**URLBase64(AESGCM)`，新增无状态 `Encrypt`。
+- **结构化审计**: 增加 API 调用日志；正文默认关闭，开启后仍执行文本、数组和深度裁剪。
+- **依赖对齐**: 升级 `cast/config/crypto/encoding/http/log/safe` 到当前稳定补丁版本。
+
 ## v1.5.5 (2026-06-21)
 - **错误堆栈重构**:
   - `Call` 函数的返回错误使用 `jsmod.MakeError` 动态包裹以保留调用堆栈。

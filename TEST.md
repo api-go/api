@@ -25,11 +25,21 @@
 *   **注入保护 (Guard)**：敏感数据禁止自动注入 Action 的 `string` 字段，杜绝无意中的内存留存。
 *   **自动生命周期回收**：`api.Call` 结束时通过 `defer` 机制强制调用 `Close()` 擦除本次请求的所有明文密钥副本及 Header 缓冲区。
 
+### 5. 动态策略与统一结果 (`TestTokenAndOverridePolicy`, `TestResultRulesAndConfigOverride`)
+验证 Action 内部 Token、控制字段黑名单、密文字段不可覆盖、URL/Method 临时覆盖，以及 `codeFields/successCodes/errorFields` 对统一结果的判断。
+
+### 6. 流式调用 (`TestStreamPreservesChunkOrder`)
+使用 `ManualDo` 验证流式 Body 的分块顺序、同步回调、完成事件和统一结果状态。
+
+### 7. 动态 Action 继承与统一 Filter 管线
+
+验证 `extends` 深度继承、父 Action 热解析、循环和缺失父项报错，以及 `filters: []` 同时收到请求与响应事件。JavaScript Filter 的中文流片段按 UTF-8 字符串传递。
+
 ## ⏱ 性能基准测试 (Benchmark)
 
 使用 `go test -bench=. ./...` 评估框架调用阶段的开销。
-> **基准**: Intel Core i9-9980HK 2.40GHz
-*   `BenchmarkCallEngineLogic-16`：约 **245 ns/op**, **2 allocs/op**。
+> **基准**: Darwin / Apple M3 Max
+*   `BenchmarkCallEngineLogic-16`：约 **118.9 ns/op**, **2 allocs/op**。
 该指标证明引擎的参数合并、注入及校验流程具有极高的运行效率和极小的内存逃逸。
 
 ## 🚀 运行测试
@@ -43,5 +53,5 @@ go test -bench=. ./...
 ```
 
 ---
-最后测试日期：2026-06-21
+最后测试日期：2026-08-17
 状态：PASS

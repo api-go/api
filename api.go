@@ -11,7 +11,7 @@ import (
 )
 
 // Call 是调度引擎的入口
-func Call[T any](action Action) (*T, error) {
+func legacyCall[T any](action Action) (*T, error) {
 	// 1. 获取并合并配置
 	actionConfig, safeBufs := GetActionConfig(action.ActionName())
 	defer func() {
@@ -122,7 +122,7 @@ func Call[T any](action Action) (*T, error) {
 }
 
 // CallBy 通过动作名称和动态 Payload 发起调用
-func CallBy[T any](name string, payload any) (*T, error) {
+func legacyCallBy[T any](name string, payload any) (*T, error) {
 	tmpl, ok := actionRegistry[name]
 	if !ok {
 		return nil, fmt.Errorf("action not found: %s", name)
@@ -140,10 +140,7 @@ func CallBy[T any](name string, payload any) (*T, error) {
 		// JSON 定义模式 (深拷贝模板以防并发冲突)
 		newGA := &GenericAction{
 			name:    ga.name,
-			url:     ga.url,
-			method:  ga.method,
-			signer:  ga.signer,
-			format:  ga.format,
+			config:  cloneMap(ga.config),
 			payload: make(map[string]any),
 		}
 		// 复制模板 Payload
@@ -163,7 +160,7 @@ func CallBy[T any](name string, payload any) (*T, error) {
 		action = newGA
 	}
 
-	return Call[T](action)
+	return legacyCall[T](action)
 }
 
 func preprocessSecrets(m map[string]any, opened *[]*safe.SecretPlaintext) {

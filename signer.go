@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"errors"
+	"sync"
 
 	"apigo.cc/go/safe"
 )
@@ -16,6 +17,7 @@ var signers = map[string]Signer{
 	"basic":  &basicSigner{},
 	"bearer": &bearerSigner{},
 }
+var signersMutex sync.RWMutex
 
 var jsRunner func(ctx context.Context, code string, args map[string]any) (map[string]any, error)
 
@@ -27,12 +29,32 @@ func SetJSRunner(runner func(context.Context, string, map[string]any) (map[strin
 
 // RegisterSigner 注册全局签名器
 func RegisterSigner(name string, s Signer) {
+	signersMutex.Lock()
 	signers[name] = s
+	signersMutex.Unlock()
+}
+
+// RegisterJSSigner registers an administrator-managed JavaScript signer.
+func RegisterJSSigner(name, code string) {
+	RegisterSigner(name, &jsSigner{code: code})
+}
+
+// RemoveSigner unregisters a custom signer. Built-in signers are retained.
+func RemoveSigner(name string) {
+	if name == "basic" || name == "bearer" || name == "none" {
+		return
+	}
+	signersMutex.Lock()
+	delete(signers, name)
+	signersMutex.Unlock()
 }
 
 // GetSigner 获取签名器
 func GetSigner(name string) Signer {
-	return signers[name]
+	signersMutex.RLock()
+	signer := signers[name]
+	signersMutex.RUnlock()
+	return signer
 }
 
 // jsSigner 包装 JS 代码为 Go Signer 接口
@@ -56,7 +78,11 @@ func (s *jsSigner) Sign(req *HttpRequest, config map[string]any) error {
 
 	// 执行 JS 签名逻辑
 	// 注意：这里默认使用 Background context，除非底层能透传，低代码环境中会由 js_export 注入正确的 ctx
-	res, err := jsRunner(context.Background(), s.code, args)
+	ctx := req.Context
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	res, err := jsRunner(ctx, s.code, args)
 	if err != nil {
 		return err
 	}
@@ -81,7 +107,7 @@ func (s *jsSigner) Sign(req *HttpRequest, config map[string]any) error {
 
 // 快速应用签名
 func sign(name string, req *HttpRequest, config map[string]any) error {
-	if name == "" {
+	if name == "" || name == "none" {
 		return nil
 	}
 	s := GetSigner(name)

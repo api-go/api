@@ -1,6 +1,7 @@
 package api
 
 import (
+	"strings"
 	"testing"
 
 	"apigo.cc/go/encoding"
@@ -14,22 +15,25 @@ func TestSafeConfigDecryption(t *testing.T) {
 	SetEncryptKeys(key, iv)
 
 	plaintext := "my-secret-password"
-	ciphertext, _ := confAES.EncryptBytes([]byte(plaintext))
-	b64 := encoding.Base64(ciphertext)
-
-	GlobalConfigs = map[string]any{
-		"api": map[string]any{
-			"testSvc": map[string]any{
-				"password": b64,
-				"username": "admin",
-			},
-		},
+	encoded, err := Encrypt(plaintext)
+	if err != nil || !strings.HasPrefix(encoded, "**") {
+		t.Fatalf("Encrypt() = %q, %v", encoded, err)
 	}
+	ciphertext, _ := confAES.EncryptBytes([]byte(plaintext))
+	b64 := "**" + encoding.URLBase64(ciphertext)
+
+	GlobalConfigs = map[string]any{}
+	SetConfig("api", map[string]any{
+		"testSvc": map[string]any{
+			"password": b64,
+			"username": "admin",
+		},
+	})
 
 	// 2. 测试获取配置
 	cfg, sbs := GetActionConfig("testSvc")
-	if len(sbs) != 1 {
-		t.Fatalf("expected 1 SafeBuf, got %d", len(sbs))
+	if len(sbs) != 0 {
+		t.Fatalf("expected persistent config secrets, got %d temporary buffers", len(sbs))
 	}
 
 	sb, ok := cfg["password"].(*safe.SafeBuf)
@@ -46,7 +50,7 @@ func TestSafeConfigDecryption(t *testing.T) {
 	// 3. 测试签名器使用 SafeBuf
 	req := &HttpRequest{}
 	signer := GetSigner("basic")
-	err := signer.Sign(req, cfg)
+	err = signer.Sign(req, cfg)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -60,19 +64,9 @@ func TestSafeConfigDecryption(t *testing.T) {
 	authStr := req.GetHeader("Authorization")
 	req.Close()
 
-	for _, sb := range sbs {
-		sb.Close()
-	}
-
-	// 验证 Authorization Header 已被擦除 (内容不再是原始数据)
+	// 验证请求 Header 在调用结束后被擦除，常驻配置则仍可用于下一次调用。
 	if authStr == expectedAuth {
 		t.Error("Authorization header should be modified/erased after Close")
-	}
-
-	// 再次尝试 Open 应该失败或得到空 (取决于 SafeBuf 实现，通常 Close 后内容被擦除)
-	p2 := sb.Open()
-	if p2.String() == plaintext && len(plaintext) > 0 {
-		t.Error("SafeBuf should be cleared after Close")
 	}
 }
 
