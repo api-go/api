@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## v1.5.8 (2026-08-19)
+- **Action YAML**: 增加无状态解析、保注释 Token 补丁和 JSON 到 YAML 转换能力，不绑定存储或内置第三方服务定义。
+- **依赖对齐**: 升级 `file`、`id`、`rand` 和 `shell` 到当前稳定补丁版本。
+
 ## v1.5.7 (2026-08-17)
 - **低代码结果投影**: 动态 Action 可通过 `resultMode: data` 让 JavaScript `api.Call` 直接返回业务数据，并补齐 `ok/code/error`。
 - **继承一致性**: 结果投影读取完整的 Action 继承配置，子 Action 无需重复声明。

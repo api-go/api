@@ -39,11 +39,15 @@
 
 验证 `resultMode: data` 仅向 JavaScript 返回业务数据与 `ok/code/error`，不会泄露 HTTP Headers；同时验证子 Action 能继承父 Action 的投影策略。
 
+### 9. Action YAML (`TestParseActionYAML`, `TestPatchActionTokensPreservesDocument`, `TestConvertActionJSONToYAML`)
+
+验证 Action YAML 的对象解析、非对象拒绝、保留注释与字段顺序的 Token 补丁，以及不注入供应商默认值的 JSON 到 YAML 转换。
+
 ## ⏱ 性能基准测试 (Benchmark)
 
 使用 `go test -bench=. ./...` 评估框架调用阶段的开销。
 > **基准**: Darwin / Apple M3 Max
-*   `BenchmarkCallEngineLogic-16`：约 **115.4 ns/op**, **80 B/op**, **2 allocs/op**。
+*   `BenchmarkCallEngineLogic-16`：约 **115.5 ns/op**, **80 B/op**, **2 allocs/op**。
 该指标证明引擎的参数合并、注入及校验流程具有极高的运行效率和极小的内存逃逸。
 
 ## 🚀 运行测试
@@ -57,5 +61,5 @@ go test -bench=. ./...
 ```
 
 ---
-最后测试日期：2026-08-17
+最后测试日期：2026-08-19
 状态：PASS

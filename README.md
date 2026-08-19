@@ -33,6 +33,7 @@ go get apigo.cc/go/api
 *   `RegisterAction` / `RemoveAction`：动态注册和热更新数据驱动的 Action。
 *   `RegisterJSSigner` / `RemoveSigner`：管理 JavaScript Signer。
 *   `RegisterJSFilter` / `RemoveFilter`：管理可复用的 JavaScript 请求/响应 Filter。
+*   `ParseActionYAML` / `PatchActionTokens` / `ConvertActionJSONToYAML`：无状态解析、保注释补丁和旧格式转换；不内置任何供应商 Action。
 
 ## 🔒 安全性 (Ultimate Memory Safety)
 
