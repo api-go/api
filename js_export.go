@@ -14,7 +14,7 @@ func init() {
 		"RegisterAction": RegisterAction,
 		"RegisterSigner": registerSigner,
 		"Encrypt":        Encrypt,
-	})
+	}, "SetConfig", "RegisterAction", "RegisterSigner")
 }
 
 // call 提供给 JS 的私有入口
@@ -28,11 +28,11 @@ func call(ctx context.Context, name string, payload any, options ...*CallOptions
 	}
 	if err != nil {
 		if res != nil {
-			return res, nil
+			return resultMap(res), nil
 		}
 		return nil, jsmod.MakeError(err)
 	}
-	return res, nil
+	return resultMap(res), nil
 }
 
 func actionUsesDataResult(name string) bool {
@@ -55,11 +55,18 @@ func projectDataResult(result *Result) any {
 		if _, exists := output["error"]; !exists {
 			output["error"] = result.Error
 		}
+		if result.Timing != nil {
+			output["timing"] = result.Timing
+		}
 		return output
 	}
-	return map[string]any{
+	output := map[string]any{
 		"ok": result.Ok, "code": result.Code, "error": result.Error, "result": result.Data,
 	}
+	if result.Timing != nil {
+		output["timing"] = result.Timing
+	}
+	return output
 }
 
 // registerSigner 允许从 JS 注册动态签名逻辑

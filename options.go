@@ -15,6 +15,7 @@ type CallOptions struct {
 	Timeout time.Duration
 	Logger  *log.Logger
 	Stream  *StreamOptions
+	Timing  bool
 }
 
 // StreamOptions receives the upstream response synchronously on the calling goroutine.

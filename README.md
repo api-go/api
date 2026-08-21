@@ -28,8 +28,8 @@ go get apigo.cc/go/api
 *   `ConfigurableAction`：提供硬编码的默认参数或元数据。
 *   `URLAction` / `MethodAction`：动态指定 Endpoint 和 HTTP 方法。
 *   `ValidatableAction`：业务参数自校验。
-*   `CallOptions`：提供内部 Token、超时、临时配置覆盖、Logger 与流式回调。
-*   `Result`：统一返回 `ok/statusCode/headers/data/code/error`，业务响应保留在 `data`。
+*   `CallOptions`：提供内部 Token、超时、临时配置覆盖、Logger、流式回调与可选 Timing。
+*   `Result`：统一返回 `ok/statusCode/headers/data/code/error`，开启 Timing 时额外返回 `timing`；业务响应保留在 `data`。
 *   `RegisterAction` / `RemoveAction`：动态注册和热更新数据驱动的 Action。
 *   `RegisterJSSigner` / `RemoveSigner`：管理 JavaScript Signer。
 *   `RegisterJSFilter` / `RemoveFilter`：管理可复用的 JavaScript 请求/响应 Filter。
@@ -76,6 +76,8 @@ result, err := api.CallBy("openai", payload, &api.CallOptions{
 ```
 
 `tokens` 未配置或为空时无需 Token。`tokens/enabled/test/logging` 与原配置中的密文字段不能通过 `options.config` 覆盖。流式调用使用 `go/http.ManualDo`，`OnHeaders` 与 `OnDone` 接收 lower-camel map，`OnData` 接收原始字节块。
+
+调用时设置 `CallOptions.Timing=true` 可获得毫秒级粗粒度诊断信息：所有调用返回 `timing.total`，流式调用还返回从调用开始到首个响应数据块的 `timing.firstToken`。默认不采集也不返回 Timing；`firstToken` 表示首个网络数据块，并非协议解析后的精确模型 Token。
 
 Action 只使用 `filters: ["name"]` 这一种形式。每个 Filter 都会收到前置 `request` 以及后置 `headers/chunk/result/done` 事件，并自行根据 `event` 决定是否处理。流式 Filter 应通过输入/输出的 `state` 保存单次调用状态，不能假设 HTTP chunk 与 SSE 或 JSONL 消息边界一致。JavaScript Filter 的 `chunk` 是 UTF-8 字符串；Go Filter 仍接收原始 `[]byte`，二进制响应不应挂载文本型 JavaScript Filter。
 

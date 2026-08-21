@@ -63,6 +63,27 @@ func TestResultRulesAndConfigOverride(t *testing.T) {
 	if receivedPath != "/v1/new" || receivedMethod != "PUT" {
 		t.Fatalf("override reached %s %s", receivedMethod, receivedPath)
 	}
+	if result.Timing != nil {
+		t.Fatalf("timing must be omitted by default: %#v", result.Timing)
+	}
+}
+
+func TestOptionalTiming(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte(`{"ok":true}`))
+	}))
+	defer server.Close()
+	name := registerTestAction(t, map[string]any{"url": server.URL, "method": "GET"})
+	result, err := api.CallBy(name, nil, &api.CallOptions{Timing: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.Timing["unit"] != "ms" {
+		t.Fatalf("unexpected timing unit: %#v", result.Timing)
+	}
+	if _, ok := result.Timing["total"].(int64); !ok {
+		t.Fatalf("timing total is missing: %#v", result.Timing)
+	}
 }
 
 func TestStreamPreservesChunkOrder(t *testing.T) {
@@ -78,7 +99,7 @@ func TestStreamPreservesChunkOrder(t *testing.T) {
 	name := registerTestAction(t, map[string]any{"url": server.URL, "method": "GET"})
 	var got bytes.Buffer
 	var done bool
-	result, err := api.CallBy(name, nil, &api.CallOptions{Stream: &api.StreamOptions{
+	result, err := api.CallBy(name, nil, &api.CallOptions{Timing: true, Stream: &api.StreamOptions{
 		OnData: func(data []byte) error { _, _ = got.Write(data); return nil },
 		OnDone: func(result map[string]any) error { done, _ = result["ok"].(bool); return nil },
 	}})
@@ -87,6 +108,9 @@ func TestStreamPreservesChunkOrder(t *testing.T) {
 	}
 	if !result.Ok || !done || !reflect.DeepEqual(got.Bytes(), bytes.Join(chunks, nil)) {
 		t.Fatalf("stream mismatch: ok=%v done=%v body=%q", result.Ok, done, got.String())
+	}
+	if _, ok := result.Timing["firstToken"].(int64); !ok {
+		t.Fatalf("stream first-token timing is missing: %#v", result.Timing)
 	}
 }
 

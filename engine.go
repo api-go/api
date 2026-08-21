@@ -25,6 +25,12 @@ func Call(action Action, options ...*CallOptions) (*Result, error) {
 	opts := firstOptions(options)
 	started := time.Now()
 	result := &Result{Headers: map[string]string{}}
+	finishTiming := func() {}
+	if opts.Timing {
+		result.Timing = map[string]any{"unit": "ms"}
+		finishTiming = func() { result.Timing["total"] = time.Since(started).Milliseconds() }
+		defer finishTiming()
+	}
 	actionConfig, _ := GetActionConfig(action.ActionName())
 	if ca, ok := action.(ConfigurableAction); ok {
 		MergeMap(actionConfig, ca.Config())
@@ -91,6 +97,9 @@ func Call(action Action, options ...*CallOptions) (*Result, error) {
 			actionConfig = filteredConfig
 		}
 	}
+	if cast.Bool(actionConfig["llm"]) {
+		sanitizeLLMPayload(httpReq.Payload)
+	}
 	if err := sign(cast.String(actionConfig["signer"]), httpReq, actionConfig); err != nil {
 		result.Error = "sign failed: " + err.Error()
 		return result, errors.New(result.Error)
@@ -104,7 +113,7 @@ func Call(action Action, options ...*CallOptions) (*Result, error) {
 	client := gohttp.NewClient(timeout)
 	defer client.Destroy()
 	if opts.Stream != nil {
-		err = callStream(client, httpReq, payload, opts.Stream, filters, action.ActionName(), opts.Context, result)
+		err = callStream(client, httpReq, payload, opts.Stream, filters, action.ActionName(), opts.Context, result, started)
 	} else {
 		err = callBuffered(client, httpReq, payload, result)
 		if err == nil {
@@ -127,6 +136,7 @@ func Call(action Action, options ...*CallOptions) (*Result, error) {
 		}
 	}
 	if err == nil && opts.Stream != nil && opts.Stream.OnDone != nil {
+		finishTiming()
 		err = opts.Stream.OnDone(resultMap(result))
 		if err != nil {
 			result.Ok = false
@@ -138,6 +148,16 @@ func Call(action Action, options ...*CallOptions) (*Result, error) {
 		return result, err
 	}
 	return result, nil
+}
+
+func sanitizeLLMPayload(payload any) {
+	values, ok := payload.(map[string]any)
+	if !ok {
+		return
+	}
+	for _, field := range []string{"name", "title", "extends", "abstract", "creation", "providerProtocol", "url", "host", "baseUrl", "path", "method", "format", "signer", "key", "filters", "requestSchema", "responseSchema", "test", "models", "defaultModel", "reasoningSupported"} {
+		delete(values, field)
+	}
 }
 
 func applyActionTraits(action Action, config map[string]any) {
@@ -251,7 +271,7 @@ func callBuffered(client *gohttp.Client, req *HttpRequest, payload any, result *
 	return nil
 }
 
-func callStream(client *gohttp.Client, req *HttpRequest, payload any, stream *StreamOptions, filters *filterPipeline, action string, ctx context.Context, result *Result) error {
+func callStream(client *gohttp.Client, req *HttpRequest, payload any, stream *StreamOptions, filters *filterPipeline, action string, ctx context.Context, result *Result, started time.Time) error {
 	res := client.ManualDo(req.Method, req.Url, payload, headerSlice(req)...)
 	if res.Error != nil {
 		result.Error = res.Error.Error()
@@ -278,18 +298,25 @@ func callStream(client *gohttp.Client, req *HttpRequest, payload any, stream *St
 	buf := make([]byte, 32*1024)
 	for {
 		n, readErr := res.Response.Body.Read(buf)
-		if n > 0 && stream.OnData != nil {
-			result.receivedBytes += int64(n)
-			filtered, filterErr := filters.apply(ctx, "chunk", map[string]any{"action": action, "chunk": append([]byte(nil), buf[:n]...), "drop": false})
-			if filterErr != nil {
-				result.Error = filterErr.Error()
-				return filterErr
+		if n > 0 {
+			if result.Timing != nil {
+				if _, exists := result.Timing["firstToken"]; !exists {
+					result.Timing["firstToken"] = time.Since(started).Milliseconds()
+				}
 			}
-			chunk := filteredChunk(filtered["chunk"])
-			if !cast.Bool(filtered["drop"]) && len(chunk) > 0 {
-				if err := invokeStreamCallback(func() error { return stream.OnData(chunk) }); err != nil {
-					result.Error = err.Error()
-					return err
+			result.receivedBytes += int64(n)
+			if stream.OnData != nil {
+				filtered, filterErr := filters.apply(ctx, "chunk", map[string]any{"action": action, "chunk": append([]byte(nil), buf[:n]...), "drop": false})
+				if filterErr != nil {
+					result.Error = filterErr.Error()
+					return filterErr
+				}
+				chunk := filteredChunk(filtered["chunk"])
+				if !cast.Bool(filtered["drop"]) && len(chunk) > 0 {
+					if err := invokeStreamCallback(func() error { return stream.OnData(chunk) }); err != nil {
+						result.Error = err.Error()
+						return err
+					}
 				}
 			}
 		}
@@ -305,10 +332,17 @@ func callStream(client *gohttp.Client, req *HttpRequest, payload any, stream *St
 }
 
 func resultMap(result *Result) map[string]any {
-	return map[string]any{
+	if result == nil {
+		return map[string]any{"ok": false, "statusCode": 0, "headers": map[string]string{}, "data": nil, "code": "", "error": "empty API result"}
+	}
+	output := map[string]any{
 		"ok": result.Ok, "statusCode": result.StatusCode, "headers": result.Headers,
 		"data": result.Data, "code": result.Code, "error": result.Error,
 	}
+	if result.Timing != nil {
+		output["timing"] = result.Timing
+	}
+	return output
 }
 
 func invokeStreamCallback(callback func() error) (err error) {
