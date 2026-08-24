@@ -80,7 +80,12 @@ func (pipeline *filterPipeline) apply(ctx context.Context, event string, input m
 		return input, nil
 	}
 	current := cloneMap(input)
-	for _, name := range pipeline.names {
+	start, end, step := 0, len(pipeline.names), 1
+	if event != "request" {
+		start, end, step = len(pipeline.names)-1, -1, -1
+	}
+	for index := start; index != end; index += step {
+		name := pipeline.names[index]
 		filter := GetFilter(name)
 		if filter == nil {
 			return nil, fmt.Errorf("filter not found: %s", name)
@@ -159,6 +164,9 @@ func applyResultMap(result *Result, value map[string]any) {
 	}
 	if item, exists := value["error"]; exists {
 		result.Error = cast.String(item)
+	}
+	if item, exists := value["errorDetail"]; exists {
+		result.ErrorDetail = item
 	}
 	if headers, ok := value["headers"].(map[string]any); ok {
 		result.Headers = map[string]string{}

@@ -267,3 +267,68 @@ func TestStreamFilterTransformsAndDropsChunks(t *testing.T) {
 		t.Fatalf("unexpected filtered stream: ok=%v body=%q events=%v", result.Ok, got.String(), events)
 	}
 }
+
+func TestFiltersWrapRequestAndResponse(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte(`{"value":"raw"}`))
+	}))
+	defer server.Close()
+	outer, inner := t.Name()+".outer", t.Name()+".inner"
+	var events []string
+	api.RegisterFilter(outer, testFilter(func(_ context.Context, event string, input map[string]any) (map[string]any, error) {
+		events = append(events, "outer:"+event)
+		if event == "result" {
+			result := input["result"].(map[string]any)
+			data := result["data"].(map[string]any)
+			if data["normalized"] != true {
+				t.Fatal("outer response filter ran before inner normalization")
+			}
+		}
+		return nil, nil
+	}))
+	api.RegisterFilter(inner, testFilter(func(_ context.Context, event string, input map[string]any) (map[string]any, error) {
+		events = append(events, "inner:"+event)
+		if event == "result" {
+			result := input["result"].(map[string]any)
+			result["data"].(map[string]any)["normalized"] = true
+			return map[string]any{"result": result}, nil
+		}
+		return nil, nil
+	}))
+	t.Cleanup(func() { api.RemoveFilter(outer); api.RemoveFilter(inner) })
+	name := registerTestAction(t, map[string]any{"url": server.URL, "method": "GET", "filters": []any{outer, inner}})
+	if result, err := api.CallBy(name, nil); err != nil || !result.Ok {
+		t.Fatalf("call failed: result=%#v err=%v", result, err)
+	}
+	want := []string{"outer:request", "inner:request", "inner:result", "outer:result"}
+	if !reflect.DeepEqual(events, want) {
+		t.Fatalf("filter order mismatch: got %v want %v", events, want)
+	}
+}
+
+func TestStreamingFiltersWrapResponseLifecycle(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte("stream"))
+	}))
+	defer server.Close()
+	outer, inner := t.Name()+".outer", t.Name()+".inner"
+	var events []string
+	register := func(name, label string) {
+		api.RegisterFilter(name, testFilter(func(_ context.Context, event string, input map[string]any) (map[string]any, error) {
+			events = append(events, label+":"+event)
+			return nil, nil
+		}))
+	}
+	register(outer, "outer")
+	register(inner, "inner")
+	t.Cleanup(func() { api.RemoveFilter(outer); api.RemoveFilter(inner) })
+	name := registerTestAction(t, map[string]any{"url": server.URL, "method": "GET", "filters": []any{outer, inner}})
+	result, err := api.CallBy(name, nil, &api.CallOptions{Stream: &api.StreamOptions{OnData: func([]byte) error { return nil }}})
+	if err != nil || !result.Ok {
+		t.Fatalf("stream failed: result=%#v err=%v", result, err)
+	}
+	want := []string{"outer:request", "inner:request", "inner:headers", "outer:headers", "inner:chunk", "outer:chunk", "inner:done", "outer:done"}
+	if !reflect.DeepEqual(events, want) {
+		t.Fatalf("stream filter order mismatch: got %v want %v", events, want)
+	}
+}

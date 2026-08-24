@@ -224,6 +224,7 @@ type Result struct {
 	Data          any
 	Code          string
 	Error         string
+	ErrorDetail   any
 	Timing        map[string]any
 	receivedBytes int64
 }

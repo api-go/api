@@ -33,7 +33,7 @@
 
 ### 7. 动态 Action 继承与统一 Filter 管线
 
-验证 `extends` 深度继承、父 Action 热解析、循环和缺失父项报错，以及 `filters: []` 同时收到请求与响应事件。JavaScript Filter 的中文流片段按 UTF-8 字符串传递。
+验证 `extends` 深度继承、父 Action 热解析、循环和缺失父项报错，以及 `filters: []` 的请求正序、响应生命周期逆序执行。JavaScript Filter 的中文流片段按 UTF-8 字符串传递。
 
 ### 8. JavaScript 业务结果投影 (`TestProjectDataResult`, `TestActionUsesInheritedDataResult`)
 
@@ -61,5 +61,5 @@ go test -bench=. ./...
 ```
 
 ---
-最后测试日期：2026-08-21
+最后测试日期：2026-08-25
 状态：PASS

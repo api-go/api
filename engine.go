@@ -268,6 +268,20 @@ func callBuffered(client *gohttp.Client, req *HttpRequest, payload any, result *
 		return err
 	}
 	result.Data = data
+	// Keep non-success provider bodies available to higher-level filters. They
+	// may normalize the public result, but diagnostics still need the raw body.
+	if result.StatusCode >= 400 {
+		if object, ok := data.(map[string]any); ok {
+			raw := map[string]any{}
+			for key, value := range object {
+				raw[key] = value
+			}
+			result.ErrorDetail = raw
+			object["_providerError"] = raw
+		} else {
+			result.ErrorDetail = data
+		}
+	}
 	return nil
 }
 
@@ -283,6 +297,23 @@ func callStream(client *gohttp.Client, req *HttpRequest, payload any, stream *St
 	}
 	defer res.Response.Body.Close()
 	copyHTTPMeta(res.Response, result)
+	if result.StatusCode >= 400 {
+		body, readErr := io.ReadAll(res.Response.Body)
+		if len(body) > 0 {
+			var detail any
+			if decodeErr := cast.UnmarshalJSON(body, &detail); decodeErr == nil {
+				result.ErrorDetail = detail
+				result.Data = detail
+			}
+		}
+		if result.Error == "" {
+			result.Error = fmt.Sprintf("HTTP status %d", result.StatusCode)
+		}
+		if readErr != nil {
+			result.Error = readErr.Error()
+		}
+		return errors.New(result.Error)
+	}
 	if filtered, err := filters.apply(ctx, "headers", map[string]any{"action": action, "result": resultMap(result)}); err != nil {
 		result.Error = err.Error()
 		return err
@@ -337,7 +368,7 @@ func resultMap(result *Result) map[string]any {
 	}
 	output := map[string]any{
 		"ok": result.Ok, "statusCode": result.StatusCode, "headers": result.Headers,
-		"data": result.Data, "code": result.Code, "error": result.Error,
+		"data": result.Data, "code": result.Code, "error": result.Error, "errorDetail": result.ErrorDetail,
 	}
 	if result.Timing != nil {
 		output["timing"] = result.Timing
