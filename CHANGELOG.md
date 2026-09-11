@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## v1.5.14 (2026-09-12)
+
+- **受保护参数**: 动态 API Action 可用 `protectedInputs` 显式声明允许展开的 payload 路径；引用只在当前低代码调用上下文内、请求 Filter 完成后解析，并参与后续签名和 HTTP 编码。
+
 ## v1.5.12 (2026-09-05)
 - **依赖对齐**: 补齐 `config`、`file`、`http` 与 `log` 的级联版本，保留 API 包的直接 YAML 依赖。
 

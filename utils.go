@@ -37,7 +37,7 @@ func GetBytesOrSafe(v any) ([]byte, func()) {
 func ExportGoStructs(packageName string) string {
 	var sb strings.Builder
 	sb.WriteString(fmt.Sprintf("package %s\n\n", packageName))
-	
+
 	sb.WriteString("// API Services and Actions\n")
 	keys := make([]string, 0, len(GlobalConfigs))
 	for k := range GlobalConfigs {
@@ -48,7 +48,7 @@ func ExportGoStructs(packageName string) string {
 	for _, k := range keys {
 		sb.WriteString(fmt.Sprintf("// Service: %s\n", k))
 	}
-	
+
 	return sb.String()
 }
 

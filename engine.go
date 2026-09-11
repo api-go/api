@@ -97,6 +97,13 @@ func Call(action Action, options ...*CallOptions) (*Result, error) {
 			actionConfig = filteredConfig
 		}
 	}
+	resolvedPayload, protectedSecrets, err := resolveProtectedInputs(opts.Context, action.ActionName(), actionConfig, httpReq.Payload)
+	if err != nil {
+		result.Error = err.Error()
+		return result, err
+	}
+	openedSecrets = append(openedSecrets, protectedSecrets...)
+	httpReq.Payload = resolvedPayload
 	if cast.Bool(actionConfig["llm"]) {
 		sanitizeLLMPayload(httpReq.Payload)
 	}
@@ -115,7 +122,7 @@ func Call(action Action, options ...*CallOptions) (*Result, error) {
 	if opts.Stream != nil {
 		err = callStream(client, httpReq, payload, opts.Stream, filters, action.ActionName(), opts.Context, result, started)
 	} else {
-		err = callBuffered(client, httpReq, payload, result)
+		err = callBuffered(client, httpReq, payload, opts.Context, result)
 		if err == nil {
 			applyResponseRules(actionConfig, result)
 			if filtered, filterErr := filters.apply(opts.Context, "result", map[string]any{"action": action.ActionName(), "result": resultMap(result)}); filterErr != nil {
@@ -252,8 +259,8 @@ func formattedPayload(payload any, config map[string]any) any {
 	}
 }
 
-func callBuffered(client *gohttp.Client, req *HttpRequest, payload any, result *Result) error {
-	res := client.Do(req.Method, req.Url, payload, headerSlice(req)...)
+func callBuffered(client *gohttp.Client, req *HttpRequest, payload any, ctx context.Context, result *Result) error {
+	res := client.DoContext(ctx, req.Method, req.Url, payload, headerSlice(req)...)
 	if res.Error != nil {
 		result.Error = res.Error.Error()
 		return res.Error
@@ -286,7 +293,7 @@ func callBuffered(client *gohttp.Client, req *HttpRequest, payload any, result *
 }
 
 func callStream(client *gohttp.Client, req *HttpRequest, payload any, stream *StreamOptions, filters *filterPipeline, action string, ctx context.Context, result *Result, started time.Time) error {
-	res := client.ManualDo(req.Method, req.Url, payload, headerSlice(req)...)
+	res := client.ManualDoContext(ctx, req.Method, req.Url, payload, headerSlice(req)...)
 	if res.Error != nil {
 		result.Error = res.Error.Error()
 		return res.Error

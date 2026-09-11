@@ -2,6 +2,8 @@
 
 `@go/api` 是一个极致精简、接口驱动、AI 友好的 API 调用引擎。它旨在消除对接第三方服务（如腾讯云、阿里云、OpenAI 等）时的繁琐 SDK 依赖和硬编码摩擦。
 
+动态 Action 可通过 `protectedInputs` 声明允许接收受保护引用的精确 payload 路径。JavaScript `api.Call` 只在这些路径通过当前调用上下文中的 `ProtectedValueResolver` 展开 `@protected:` 引用；未声明位置始终保持为不可用的引用字符串。请求 Filter 只能处理引用，展开发生在签名和 HTTP 编码之前，确保签名覆盖最终请求内容。
+
 ## 🎯 设计哲学
 
 *   **数据驱动 (Data-Driven)**：一切皆数据，通过强类型 Action 结构体描述请求。

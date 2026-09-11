@@ -123,6 +123,11 @@ func trimLogValue(value reflect.Value, depth, maxDepth, maxItems, maxText int) a
 		}
 		value = value.Elem()
 	}
+	if value.CanInterface() {
+		if _, ok := value.Interface().(protectedString); ok {
+			return "***"
+		}
+	}
 	if depth >= maxDepth {
 		return "[max depth]"
 	}
