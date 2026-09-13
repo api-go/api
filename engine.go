@@ -117,11 +117,16 @@ func Call(action Action, options ...*CallOptions) (*Result, error) {
 	if timeout <= 0 {
 		timeout = cast.Duration(actionConfig["timeout"])
 	}
-	client := gohttp.NewClient(timeout)
-	defer client.Destroy()
-	if opts.Stream != nil {
+	webSocketTransport := isWebSocketTransport(actionConfig)
+	if webSocketTransport {
+		err = callWebSocket(httpReq, payload, opts.Stream, filters, action.ActionName(), opts.Context, actionConfig, result, started, timeout)
+	} else if opts.Stream != nil {
+		client := gohttp.NewClient(timeout)
+		defer client.Destroy()
 		err = callStream(client, httpReq, payload, opts.Stream, filters, action.ActionName(), opts.Context, result, started)
 	} else {
+		client := gohttp.NewClient(timeout)
+		defer client.Destroy()
 		err = callBuffered(client, httpReq, payload, opts.Context, result)
 		if err == nil {
 			applyResponseRules(actionConfig, result)
@@ -133,7 +138,7 @@ func Call(action Action, options ...*CallOptions) (*Result, error) {
 			}
 		}
 	}
-	if err == nil && opts.Stream != nil {
+	if err == nil && (opts.Stream != nil || webSocketTransport) {
 		applyResponseRules(actionConfig, result)
 		if filtered, filterErr := filters.apply(opts.Context, "done", map[string]any{"action": action.ActionName(), "result": resultMap(result)}); filterErr != nil {
 			err = filterErr

@@ -137,7 +137,7 @@ func fill(action any, actionConfig map[string]any) {
 	if ga, ok := action.(*GenericAction); ok {
 		// 对于通用动作，将配置合并到 payload map 中（仅合并 payload 不存在的 key）
 		for k, v := range actionConfig {
-			if k == "url" || k == "method" || k == "signer" || k == "format" || k == "headers" || k == "timeout" {
+			if k == "url" || k == "method" || k == "signer" || k == "format" || k == "headers" || k == "timeout" || k == "transport" || k == "websocket" {
 				continue
 			}
 			if _, exists := ga.payload[k]; !exists {

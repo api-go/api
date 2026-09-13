@@ -3,19 +3,179 @@ package api_test
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"testing"
+	"time"
 
 	"apigo.cc/go/api"
+	"github.com/gorilla/websocket"
 )
 
 type testFilter func(context.Context, string, map[string]any) (map[string]any, error)
 
 func (filter testFilter) Apply(ctx context.Context, event string, input map[string]any) (map[string]any, error) {
 	return filter(ctx, event, input)
+}
+
+func TestManagedWebSocketReusesIdleConnection(t *testing.T) {
+	var connections atomic.Int32
+	upgrader := websocket.Upgrader{}
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		conn, err := upgrader.Upgrade(w, r, nil)
+		if err != nil {
+			return
+		}
+		connections.Add(1)
+		defer conn.Close()
+		for {
+			_, data, err := conn.ReadMessage()
+			if err != nil {
+				return
+			}
+			if err := conn.WriteMessage(websocket.TextMessage, append([]byte("done:"), data...)); err != nil {
+				return
+			}
+		}
+	}))
+	defer server.Close()
+
+	filterName := t.Name() + ".filter"
+	api.RegisterFilter(filterName, testFilter(func(_ context.Context, event string, input map[string]any) (map[string]any, error) {
+		if event == "chunk" {
+			value := string(input["chunk"].([]byte))
+			return map[string]any{"chunk": input["chunk"], "done": strings.HasPrefix(value, "done:"), "state": map[string]any{"value": value}}, nil
+		}
+		if event == "done" {
+			result := input["result"].(map[string]any)
+			result["data"] = input["state"].(map[string]any)["value"]
+			return map[string]any{"result": result}, nil
+		}
+		return nil, nil
+	}))
+	t.Cleanup(func() { api.RemoveFilter(filterName) })
+	name := registerTestAction(t, map[string]any{
+		"url": server.URL, "transport": "websocket", "filters": []any{filterName},
+		"websocket": map[string]any{"connectionID": "shared", "responseMode": "filter", "idleTimeout": time.Minute},
+	})
+	for _, payload := range []string{"one", "two"} {
+		var received string
+		result, err := api.CallBy(name, payload, &api.CallOptions{Stream: &api.StreamOptions{OnData: func(data []byte) error {
+			received = string(data)
+			return nil
+		}}})
+		if err != nil || !result.Ok || !strings.HasPrefix(received, "done:") {
+			t.Fatalf("unexpected call result: result=%#v received=%q err=%v", result, received, err)
+		}
+	}
+	result, err := api.CallBy(name, "three")
+	if err != nil || !result.Ok || !strings.HasPrefix(result.Data.(string), "done:") {
+		t.Fatalf("unexpected buffered WebSocket result: result=%#v err=%v", result, err)
+	}
+	if connections.Load() != 1 {
+		t.Fatalf("managed transport opened %d connections", connections.Load())
+	}
+}
+
+func TestManagedWebSocketSerializesConcurrentCalls(t *testing.T) {
+	var connections atomic.Int32
+	upgrader := websocket.Upgrader{}
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		conn, err := upgrader.Upgrade(w, r, nil)
+		if err != nil {
+			return
+		}
+		connections.Add(1)
+		defer conn.Close()
+		for {
+			_, data, err := conn.ReadMessage()
+			if err != nil {
+				return
+			}
+			if err := conn.WriteMessage(websocket.TextMessage, data); err != nil {
+				return
+			}
+		}
+	}))
+	defer server.Close()
+
+	name := registerTestAction(t, map[string]any{
+		"url": server.URL, "transport": "websocket",
+		"websocket": map[string]any{"connectionID": "shared-concurrent", "idleTimeout": time.Minute},
+	})
+	const calls = 12
+	errors := make(chan error, calls)
+	var wait sync.WaitGroup
+	for index := 0; index < calls; index++ {
+		wait.Add(1)
+		go func(index int) {
+			defer wait.Done()
+			payload := map[string]any{"call": index}
+			var received []byte
+			result, err := api.CallBy(name, payload, &api.CallOptions{Stream: &api.StreamOptions{OnData: func(data []byte) error {
+				received = append(received[:0], data...)
+				return nil
+			}}})
+			if err != nil {
+				errors <- err
+				return
+			}
+			if !result.Ok || len(received) == 0 {
+				errors <- fmt.Errorf("call %d returned %#v with frame %q", index, result, received)
+			}
+		}(index)
+	}
+	wait.Wait()
+	close(errors)
+	for err := range errors {
+		t.Error(err)
+	}
+	if connections.Load() != 1 {
+		t.Fatalf("concurrent calls opened %d connections", connections.Load())
+	}
+}
+
+func TestManagedWebSocketExpiresIdleConnection(t *testing.T) {
+	var connections atomic.Int32
+	upgrader := websocket.Upgrader{}
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		conn, err := upgrader.Upgrade(w, r, nil)
+		if err != nil {
+			return
+		}
+		connections.Add(1)
+		defer conn.Close()
+		for {
+			_, data, err := conn.ReadMessage()
+			if err != nil {
+				return
+			}
+			if err := conn.WriteMessage(websocket.TextMessage, data); err != nil {
+				return
+			}
+		}
+	}))
+	defer server.Close()
+
+	name := registerTestAction(t, map[string]any{
+		"url": server.URL, "transport": "websocket",
+		"websocket": map[string]any{"connectionID": "idle-expiry", "idleTimeout": "20ms"},
+	})
+	if result, err := api.CallBy(name, "first"); err != nil || !result.Ok {
+		t.Fatalf("first call failed: result=%#v err=%v", result, err)
+	}
+	time.Sleep(80 * time.Millisecond)
+	if result, err := api.CallBy(name, "second"); err != nil || !result.Ok {
+		t.Fatalf("second call failed: result=%#v err=%v", result, err)
+	}
+	if connections.Load() != 2 {
+		t.Fatalf("idle connection was not recycled: opened %d connections", connections.Load())
+	}
 }
 
 func registerTestAction(t *testing.T, config map[string]any) string {

@@ -101,12 +101,13 @@ func isSecretValue(value any) bool {
 
 func applyResponseRules(config map[string]any, result *Result) {
 	response, _ := config["response"].(map[string]any)
+	successStatus := result.StatusCode == 101 || result.StatusCode >= 200 && result.StatusCode < 300
 	result.Code = firstPathString(result.Data, response["codeFields"])
 	if result.Error == "" {
 		result.Error = firstPathString(result.Data, response["errorFields"])
 	}
-	result.Ok = result.StatusCode >= 200 && result.StatusCode < 300 && result.Error == ""
-	if (result.StatusCode < 200 || result.StatusCode >= 300) && result.Error == "" {
+	result.Ok = successStatus && result.Error == ""
+	if !successStatus && result.Error == "" {
 		result.Error = fmt.Sprintf("HTTP status %d", result.StatusCode)
 	}
 	if codes := stringList(response["successCodes"]); len(codes) > 0 {
@@ -120,7 +121,7 @@ func applyResponseRules(config map[string]any, result *Result) {
 		result.Ok = false
 		for _, code := range codes {
 			if result.Code == code {
-				result.Ok = result.Error == "" && result.StatusCode >= 200 && result.StatusCode < 300
+				result.Ok = result.Error == "" && successStatus
 				break
 			}
 		}

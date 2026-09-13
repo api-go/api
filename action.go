@@ -55,6 +55,7 @@ func RegisterAction(name string, definition any) {
 	if definition == nil {
 		return
 	}
+	apiWebSockets.invalidateAction(name)
 
 	t := reflect.TypeOf(definition)
 	for t.Kind() == reflect.Ptr {
@@ -85,6 +86,7 @@ func RegisterAction(name string, definition any) {
 
 // RemoveAction unregisters a dynamic Action.
 func RemoveAction(name string) {
+	apiWebSockets.invalidateAction(name)
 	actionRegistryMutex.Lock()
 	if previous, ok := actionRegistry[name].(*GenericAction); ok {
 		closeSecrets(previous.config)

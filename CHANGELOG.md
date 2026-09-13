@@ -1,5 +1,8 @@
 # CHANGELOG
 
+## v1.5.15 (2026-09-13)
+- **托管 WebSocket Transport**: `Call` 支持 Action 驱动的 WebSocket 连接复用、单在途租约、Filter 终态、空闲回收、Action 更新失效和握手错误归一化，并自动导出到既有 JavaScript `api.Call`。
+
 ## v1.5.14 (2026-09-12)
 
 - **受保护参数**: 动态 API Action 可用 `protectedInputs` 显式声明允许展开的 payload 路径；引用只在当前低代码调用上下文内、请求 Filter 完成后解析，并参与后续签名和 HTTP 编码。

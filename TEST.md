@@ -1,5 +1,8 @@
 # TEST
 
+## v1.5.15
+- 托管 WebSocket 覆盖连接复用、Filter 驱动终态、流式回调、空闲回收、Action 更新失效和握手错误。
+
 ## Unreleased
 
 - 新增短信发送风格的本地 HTTP Action 测试，验证只有 `protectedInputs` 声明的字段会展开受保护引用，且请求 Filter 只能观察到不可展开的引用。
