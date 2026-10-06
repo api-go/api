@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [v1.5.16] - 2026-10-06
+
+- 发布模型配置就绪状态检查接口
+
+`ModelConfigured` uses the Action inheritance resolver without calling a provider or exposing configuration. It rejects missing, abstract, disabled, and incomplete model Actions. Covered by `TestModelConfiguredUsesEffectiveActionWithoutCallingProvider`.
+
 ## v1.5.15 (2026-09-13)
 - **托管 WebSocket Transport**: `Call` 支持 Action 驱动的 WebSocket 连接复用、单在途租约、Filter 终态、空闲回收、Action 更新失效和握手错误归一化，并自动导出到既有 JavaScript `api.Call`。
 

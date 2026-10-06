@@ -92,3 +92,7 @@ Action 只使用 `filters: ["name"]` 这一种形式。Filter 采用中间件包
 
 ---
 更多详情请参阅 [TEST.md](./TEST.md) 和 [CHANGELOG.md](./CHANGELOG.md)。
+
+## model configuration readiness
+
+`ModelConfigured` uses the Action inheritance resolver without calling a provider or exposing configuration. It rejects missing, abstract, disabled, and incomplete model Actions. Covered by `TestModelConfiguredUsesEffectiveActionWithoutCallingProvider`.

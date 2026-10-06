@@ -1,9 +1,16 @@
 # TEST
 
+## v1.5.16 发布验证（2026-10-06）
+
+- `GOWORK=off go test -v ./...` 与 `GOWORK=off go test -bench=. ./...` 均通过，仅使用 go.mod 已发布依赖。
+- API 导出工具不可用；采用 `GOWORK=off go doc -all` 与导出源码交叉核对 README。
+- 本机：darwin/arm64，Apple M3 Max；基准结果仅代表本次本地运行。
+- `BenchmarkCallEngineLogic-16    	 9235214	       110.3 ns/op	      80 B/op	       2 allocs/op`
+
 ## v1.5.15
 - 托管 WebSocket 覆盖连接复用、Filter 驱动终态、流式回调、空闲回收、Action 更新失效和握手错误。
 
-## Unreleased
+## v1.5.16 覆盖
 
 - 新增短信发送风格的本地 HTTP Action 测试，验证只有 `protectedInputs` 声明的字段会展开受保护引用，且请求 Filter 只能观察到不可展开的引用。
 
@@ -70,3 +77,7 @@ go test -bench=. ./...
 ---
 最后测试日期：2026-08-25
 状态：PASS
+
+## v1.5.16 model configuration readiness
+
+`ModelConfigured` uses the Action inheritance resolver without calling a provider or exposing configuration. It rejects missing, abstract, disabled, and incomplete model Actions. Covered by `TestModelConfiguredUsesEffectiveActionWithoutCallingProvider`.
