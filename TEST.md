@@ -1,5 +1,11 @@
 # TEST
 
+## 未发布：流式 HTTP 失败生命周期
+
+- `TestStreamingHTTPFailureRunsResponseFilters` 使用本地 HTTP 400，验证请求状态和结果 Filter 保留、错误不变为成功、不会发出成功流回调。不调用真实模型。
+- `TestInputPreviewIsOptInAndUnicodeBounded` 覆盖默认关闭、Unicode长度限制与输入预览边界。
+- 2026-10-08：`GOWORK=off go test . -run '^(TestStreamingHTTPFailureRunsResponseFilters|TestInputPreview.*)$' -count=1` 通过（0.559s）；本次仅本地提交，未运行发布全量/Benchmark门槛，不打标签、不推送。
+
 ## v1.5.16 发布验证（2026-10-06）
 
 - `GOWORK=off go test -v ./...` 与 `GOWORK=off go test -bench=. ./...` 均通过，仅使用 go.mod 已发布依赖。

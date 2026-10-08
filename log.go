@@ -68,6 +68,33 @@ func logCall(options *CallOptions, config map[string]any, action, method, url st
 	entry.Stream = options.Stream != nil
 	entry.ResponseSize = result.receivedBytes
 	logging, _ := config["logging"].(map[string]any)
+	if options.InputPreview {
+		if values, ok := request.(map[string]any); ok {
+			input, count := values["input"], 1
+			switch inputs := input.(type) {
+			case []string:
+				count = len(inputs)
+				if count > 0 {
+					input = inputs[0]
+				}
+			case []any:
+				count = len(inputs)
+				if count > 0 {
+					input = inputs[0]
+				}
+			}
+			// Only literal text is previewed; protected values and token arrays
+			// must not be converted into loggable strings.
+			if text, ok := input.(string); ok {
+				preview := []rune(strings.Join(strings.Fields(text), " "))
+				if len(preview) > 20 {
+					preview = append(preview[:20], '…')
+				}
+				entry.Extra["InputPreview"] = string(preview)
+				entry.Extra["InputCount"] = count
+			}
+		}
+	}
 	if cast.Bool(logging["request"]) {
 		entry.RequestData = logSnapshot(request, logging)
 	}

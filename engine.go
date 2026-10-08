@@ -138,6 +138,19 @@ func Call(action Action, options ...*CallOptions) (*Result, error) {
 			}
 		}
 	}
+	// HTTP failures on a streaming request are ordinary error responses, not
+	// completed streams. Run response filters so session owners can invalidate
+	// rejected provider chains, while retaining the original transport error.
+	if err != nil && opts.Stream != nil && !webSocketTransport && result.StatusCode >= 400 {
+		if filtered, filterErr := filters.apply(opts.Context, "result", map[string]any{"action": action.ActionName(), "result": resultMap(result)}); filterErr == nil {
+			if value, ok := filtered["result"].(map[string]any); ok {
+				applyResultMap(result, value)
+			}
+		} else {
+			err = fmt.Errorf("%w; response filter failed: %v", err, filterErr)
+			result.Error = err.Error()
+		}
+	}
 	if err == nil && (opts.Stream != nil || webSocketTransport) {
 		applyResponseRules(actionConfig, result)
 		if filtered, filterErr := filters.apply(opts.Context, "done", map[string]any{"action": action.ActionName(), "result": resultMap(result)}); filterErr != nil {

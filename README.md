@@ -30,9 +30,10 @@ go get apigo.cc/go/api
 *   `ConfigurableAction`：提供硬编码的默认参数或元数据。
 *   `URLAction` / `MethodAction`：动态指定 Endpoint 和 HTTP 方法。
 *   `ValidatableAction`：业务参数自校验。
-*   `CallOptions`：提供内部 Token、超时、临时配置覆盖、Logger、流式回调与可选 Timing。
+*   `CallOptions`：提供内部 Token、超时、临时配置覆盖、Logger、流式回调与可选 Timing。`InputPreview` 可显式开启输入诊断：仅记录 `input` 第一条文本前 20 个 Unicode 字符和批次数量，不展开受保护值或记录其余输入；默认关闭。
 *   **托管 WebSocket Transport**：Action 设置 `transport: websocket` 后，`Call` 自动按连接 ID 复用单在途连接、处理空闲回收，并继续使用既有 Signer、Filter、日志和统一 Result。
 *   `Result`：统一返回 `ok/statusCode/headers/data/code/error/errorDetail`，开启 Timing 时额外返回 `timing`；业务响应保留在 `data`，HTTP 非成功响应的原始详情保留在 `errorDetail`。
+*   流式 HTTP 非成功响应同样触发 `result` Filter，使会话所有者可以处理失效的服务端历史；保留调用错误，不触发成功流的 `done`/`OnDone`。
 *   `RegisterAction` / `RemoveAction`：动态注册和热更新数据驱动的 Action。
 *   `RegisterJSSigner` / `RemoveSigner`：管理 JavaScript Signer。
 *   `RegisterJSFilter` / `RemoveFilter`：管理可复用的 JavaScript 请求/响应 Filter。

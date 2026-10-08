@@ -16,6 +16,8 @@ type CallOptions struct {
 	Logger  *log.Logger
 	Stream  *StreamOptions
 	Timing  bool
+	// InputPreview logs at most 20 Unicode characters from the first text input.
+	InputPreview bool
 }
 
 // StreamOptions receives the upstream response synchronously on the calling goroutine.
