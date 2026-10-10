@@ -7,9 +7,9 @@ require (
 	apigo.cc/go/config v1.5.8
 	apigo.cc/go/crypto v1.5.8
 	apigo.cc/go/encoding v1.5.8
-	apigo.cc/go/http v1.5.10
+	apigo.cc/go/http v1.5.11
 	apigo.cc/go/jsmod v1.5.5
-	apigo.cc/go/log v1.5.16
+	apigo.cc/go/log v1.5.17
 	apigo.cc/go/safe v1.5.4
 	github.com/gorilla/websocket v1.5.3
 	gopkg.in/yaml.v3 v3.0.1

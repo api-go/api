@@ -97,3 +97,7 @@ Action 只使用 `filters: ["name"]` 这一种形式。Filter 采用中间件包
 ## model configuration readiness
 
 `ModelConfigured` uses the Action inheritance resolver without calling a provider or exposing configuration. It rejects missing, abstract, disabled, and incomplete model Actions. Covered by `TestModelConfiguredUsesEffectiveActionWithoutCallingProvider`.
+
+## v1.5.17 依赖基线
+
+本版本对齐 Log v1.5.17 与发布时模块索引中的上游已发布依赖；公开 API 保持兼容。
