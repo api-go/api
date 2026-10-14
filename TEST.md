@@ -1,5 +1,13 @@
 # TEST
 
+## v1.5.18：WebSocket OpenContext 对齐
+
+- 本地完整测试、基准及竞态测试通过；既有连接复用、并发串行与空闲关闭场景保持通过。
+- `TestManagedOpenRetainsHandshakeRejectionDetails` 验证拒绝状态、Header 与 JSON 错误详情；GOWORK=off 使用已发布 HTTP v1.5.12。
+- `TestManagedOpenReconnectsAfterInitiatingContextCancellation` 验证创建 Context 取消后下次调用重新连接；2026-10-14 GOWORK=off 全量、基准及托管专项 race（2 次）通过，CallEngineLogic 115.1 ns/op、80 B/op、2 allocs/op（Apple M3 Max）。
+
+- 导出 API 使用 GOWORK=off go doc 与源码交叉核对。
+
 ## 未发布：流式 HTTP 失败生命周期
 
 - `TestStreamingHTTPFailureRunsResponseFilters` 使用本地 HTTP 400，验证请求状态和结果 Filter 保留、错误不变为成功、不会发出成功流回调。不调用真实模型。

@@ -19,14 +19,15 @@ import (
 const defaultWebSocketIdleTimeout = time.Minute
 
 type managedWebSocket struct {
-	key        string
-	action     string
-	conn       *gohttp.WebSocketConn
-	lease      chan struct{}
-	manager    *webSocketManager
-	idleTimer  *time.Timer
-	generation uint64
-	mu         sync.Mutex
+	key         string
+	action      string
+	conn        *gohttp.WebSocketConn
+	openContext context.Context
+	lease       chan struct{}
+	manager     *webSocketManager
+	idleTimer   *time.Timer
+	generation  uint64
+	mu          sync.Mutex
 }
 
 type webSocketManager struct {
@@ -68,13 +69,25 @@ func (manager *webSocketManager) acquire(ctx context.Context, action, connection
 		managed.idleTimer = nil
 	}
 	conn := managed.conn
+	if conn != nil && managed.openContext != nil && managed.openContext.Err() != nil {
+		_ = conn.Close()
+		managed.conn = nil
+		conn = nil
+	}
 	managed.mu.Unlock()
 	if conn != nil {
 		return managed, nil
 	}
 
 	client := gohttp.NewClient(timeout)
-	conn, err := client.WebSocket(requestURL, headers...)
+	requestHeaders := make(stdhttp.Header)
+	for index := 1; index < len(headers); index += 2 {
+		requestHeaders.Add(headers[index-1], headers[index])
+	}
+	conn, handshake, err := client.OpenContext(ctx, requestURL, requestHeaders)
+	if err == nil && handshake != nil && handshake.Body != nil {
+		handshake.Body.Close()
+	}
 	client.Destroy()
 	if err != nil {
 		managed.release(false, idleTimeout)
@@ -82,6 +95,7 @@ func (manager *webSocketManager) acquire(ctx context.Context, action, connection
 	}
 	managed.mu.Lock()
 	managed.conn = conn
+	managed.openContext = ctx
 	managed.generation++
 	managed.mu.Unlock()
 	return managed, nil
