@@ -8,6 +8,13 @@
 
 - 导出 API 使用 GOWORK=off go doc 与源码交叉核对。
 
+## 未发布：显式模拟
+
+- TestMockNeverContactsProviderAndRequiresDeclaredInputs：本地服务器验证零网络调用、测试号码限制、Token、禁用、取消、禁止覆盖以及默认真实调用。
+- 输入拒绝保留类型化 MockInputError、mock_input_rejected 结果码及零网络调用证据。
+- TestMockPreservesProviderFailureAndInheritance：继承与供应商失败应答。
+- `go test ./...`、`go test -race ./...` 通过。
+
 ## 未发布：流式 HTTP 失败生命周期
 
 - `TestStreamingHTTPFailureRunsResponseFilters` 使用本地 HTTP 400，验证请求状态和结果 Filter 保留、错误不变为成功、不会发出成功流回调。不调用真实模型。
@@ -103,4 +110,13 @@ go test -bench=. ./...
 
 ```text
 BenchmarkCallEngineLogic-16    	 9693907	       121.8 ns/op	      80 B/op	       2 allocs/op
+```
+
+## v1.5.19 发布验证（2026-10-15）
+
+- `GOWORK=off go test -v ./...` 与 `GOWORK=off go test -bench=. ./...` 通过。
+- getExports 工具不可用，以 `GOWORK=off go doc` 与导出源码核对 API。
+
+```text
+BenchmarkCallEngineLogic-16    	 9250916	       118.3 ns/op	      80 B/op	       2 allocs/op
 ```

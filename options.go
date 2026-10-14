@@ -16,6 +16,8 @@ type CallOptions struct {
 	Logger  *log.Logger
 	Stream  *StreamOptions
 	Timing  bool
+	// Mode defaults to live. Mock uses only the Action's declared fixture.
+	Mode string
 	// InputPreview logs at most 20 Unicode characters from the first text input.
 	InputPreview bool
 }

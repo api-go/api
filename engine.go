@@ -54,6 +54,13 @@ func Call(action Action, options ...*CallOptions) (*Result, error) {
 		logCall(opts, actionConfig, action.ActionName(), "", "", nil, result, started)
 		return result, err
 	}
+	if opts.Mode != "" && opts.Mode != "live" && opts.Mode != "mock" {
+		result.Error = "API mode must be live or mock"
+		return result, errors.New(result.Error)
+	}
+	if opts.Mode == "mock" {
+		return callMock(action, actionConfig, opts, result)
+	}
 
 	var openedSecrets []*safe.SecretPlaintext
 	preprocessCallSecrets(actionConfig, &openedSecrets)
@@ -394,6 +401,9 @@ func resultMap(result *Result) map[string]any {
 	output := map[string]any{
 		"ok": result.Ok, "statusCode": result.StatusCode, "headers": result.Headers,
 		"data": result.Data, "code": result.Code, "error": result.Error, "errorDetail": result.ErrorDetail,
+	}
+	if result.Simulated {
+		output["mode"], output["simulated"] = result.Mode, true
 	}
 	if result.Timing != nil {
 		output["timing"] = result.Timing

@@ -4,6 +4,12 @@
 
 依赖已发布 HTTP v1.5.12 的统一 Open 接口；握手错误的响应 Body 由错误处理方消费和关闭，保留拒绝状态、Header 与错误详情。
 
+## 本地模拟
+
+不匹配声明输入时返回 `*MockInputError` 和结果码 `mock_input_rejected`，调用方可将其记录为预期反例；配置错误、取消和权限错误仍是执行失败。
+
+`CallOptions.Mode="mock"` 使用 Action 的 `mock: {enabled: true, request: {to: "测试号码"}, response: {statusCode: 200, data: {...}}}` 固定应答。request 必须非空，其声明字段必须匹配调用输入；可用于只允许指定测试号码。模拟不打开凭据、不签名、不执行 Filter、不连接网络，也不支持流式。Token、enabled、abstract 和取消检查仍生效，`options.config` 不可覆盖 mock。结果明确包含 `mode:"mock", simulated:true`，失败应答沿用 response 规则。默认或 `Mode="live"` 保持真实调用；不自动回退模拟。模拟成功不能证明供应商认证或实际送达。
+
 `@go/api` 是一个极致精简、接口驱动、AI 友好的 API 调用引擎。它旨在消除对接第三方服务（如腾讯云、阿里云、OpenAI 等）时的繁琐 SDK 依赖和硬编码摩擦。
 
 动态 Action 可通过 `protectedInputs` 声明允许接收受保护引用的精确 payload 路径。JavaScript `api.Call` 只在这些路径通过当前调用上下文中的 `ProtectedValueResolver` 展开 `@protected:` 引用；未声明位置始终保持为不可用的引用字符串。请求 Filter 只能处理引用，展开发生在签名和 HTTP 编码之前，确保签名覆盖最终请求内容。
@@ -102,6 +108,6 @@ Action 只使用 `filters: ["name"]` 这一种形式。Filter 采用中间件包
 
 `ModelConfigured` uses the Action inheritance resolver without calling a provider or exposing configuration. It rejects missing, abstract, disabled, and incomplete model Actions. Covered by `TestModelConfiguredUsesEffectiveActionWithoutCallingProvider`.
 
-## v1.5.17 依赖基线
+## v1.5.19 依赖基线
 
 本版本对齐 Log v1.5.17 与发布时模块索引中的上游已发布依赖；公开 API 保持兼容。

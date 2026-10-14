@@ -46,6 +46,9 @@ func projectDataResult(result *Result) any {
 	}
 	if data, ok := result.Data.(map[string]any); ok {
 		output := cloneMap(data)
+		if result.Simulated {
+			output["mode"], output["simulated"] = result.Mode, true
+		}
 		if _, exists := output["ok"]; !exists {
 			output["ok"] = result.Ok
 		}
@@ -62,6 +65,9 @@ func projectDataResult(result *Result) any {
 	}
 	output := map[string]any{
 		"ok": result.Ok, "code": result.Code, "error": result.Error, "result": result.Data,
+	}
+	if result.Simulated {
+		output["mode"], output["simulated"] = result.Mode, true
 	}
 	if result.Timing != nil {
 		output["timing"] = result.Timing

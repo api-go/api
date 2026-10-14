@@ -11,7 +11,7 @@ import (
 )
 
 var overrideBlacklist = map[string]bool{
-	"tokens": true, "enabled": true, "test": true, "logging": true,
+	"tokens": true, "enabled": true, "test": true, "logging": true, "mock": true,
 }
 
 func verifyToken(config map[string]any, token string) error {

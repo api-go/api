@@ -220,6 +220,8 @@ func (r *HttpRequest) SetHeader(key string, values ...any) {
 
 // Result 定义 API 调用的标准返回结果
 type Result struct {
+	Mode          string
+	Simulated     bool
 	Ok            bool
 	StatusCode    int
 	Headers       map[string]string
