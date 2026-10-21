@@ -1,5 +1,10 @@
 # TEST
 
+## 未发布：动态配置与业务输入边界
+
+- `TestDynamicConfigurationDoesNotBecomeProviderPayload` 通过实际 HTTP 验证元数据隔离、Query/Header、继承默认值及显式业务同名字段保留。
+- 2026-10-21：`GOWORK=off` 全量、race、基准通过；CallEngineLogic 121.4 ns/op、80 B/op、2 allocs/op（Apple M3 Max）。导出交叉核对使用 `go doc -all` 与源码，无新公开 API。
+
 ## v1.5.18：WebSocket OpenContext 对齐
 
 - 本地完整测试、基准及竞态测试通过；既有连接复用、并发串行与空闲关闭场景保持通过。

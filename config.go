@@ -135,9 +135,18 @@ func fill(action any, actionConfig map[string]any) {
 	}
 
 	if ga, ok := action.(*GenericAction); ok {
-		// 对于通用动作，将配置合并到 payload map 中（仅合并 payload 不存在的 key）
+		// Explicit payload defaults also inherit, without exporting their wrapper.
+		if defaults, ok := actionConfig["payload"].(map[string]any); ok {
+			for key, value := range cloneMap(defaults) {
+				if _, exists := ga.payload[key]; !exists {
+					ga.payload[key] = value
+				}
+			}
+		}
+		// Metadata stays in config for filters/signers; only business defaults
+		// fill missing payload keys. Explicit caller fields are never stripped.
 		for k, v := range actionConfig {
-			if k == "url" || k == "method" || k == "signer" || k == "format" || k == "headers" || k == "timeout" || k == "transport" || k == "websocket" {
+			if actionConfigurationField(k) {
 				continue
 			}
 			if _, exists := ga.payload[k]; !exists {
@@ -181,6 +190,16 @@ func fill(action any, actionConfig map[string]any) {
 			}
 		}
 	}
+}
+
+func actionConfigurationField(name string) bool {
+	switch name {
+	case "url", "host", "baseUrl", "path", "query", "method", "signer", "format", "headers", "timeout", "transport", "websocket",
+		"name", "title", "summary", "protocol", "extends", "abstract", "creation", "providerProtocol", "requestSchema", "responseSchema", "test",
+		"models", "defaultModel", "reasoningSupported", "enabled", "tokens", "logging", "mock", "payload", "protectedInputs", "resultMode", "filters", "response", "llm", "key":
+		return true
+	}
+	return false
 }
 
 func findConfigValue(m map[string]any, key string) (any, bool) {
