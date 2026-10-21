@@ -7,7 +7,7 @@ require (
 	apigo.cc/go/config v1.5.8
 	apigo.cc/go/crypto v1.5.8
 	apigo.cc/go/encoding v1.5.8
-	apigo.cc/go/http v1.5.12
+	apigo.cc/go/http v1.5.13
 	apigo.cc/go/jsmod v1.5.5
 	apigo.cc/go/log v1.5.17
 	apigo.cc/go/safe v1.5.4
