@@ -125,3 +125,14 @@ BenchmarkCallEngineLogic-16    	 9693907	       121.8 ns/op	      80 B/op	      
 ```text
 BenchmarkCallEngineLogic-16    	 9250916	       118.3 ns/op	      80 B/op	       2 allocs/op
 ```
+
+## v1.5.21 发布验证（2026-10-26）
+
+GOWORK=off，正式依赖 crypto v1.5.9，无 replace。`go test -v ./...`、`go test -bench=. ./...`、`go vet ./...`、`go mod verify` 通过。使用 `go doc` 与源码交叉核对 API，替代 getExports。现有回归覆盖本模块业务；新旧 GCM 格式、认证失败和性能基准见 crypto v1.5.9。
+
+本次功能测试无跳过。
+
+基准结果：
+```text
+BenchmarkCallEngineLogic-16    	 9874006	       123.0 ns/op	      80 B/op	       2 allocs/op
+```
