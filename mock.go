@@ -1,7 +1,7 @@
 package api
 
 import (
-	"apigo.cc/go/cast"
+	"github.com/api-go/cast"
 	"errors"
 )
 

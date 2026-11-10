@@ -8,9 +8,9 @@ import (
 	"strings"
 	"testing"
 
-	"apigo.cc/go/api"
-	"apigo.cc/go/cast"
-	"apigo.cc/go/encoding"
+	"github.com/api-go/api"
+	"github.com/api-go/cast"
+	"github.com/api-go/encoding"
 )
 
 // =========================================================================
@@ -226,7 +226,7 @@ func TestFullCallFlow(t *testing.T) {
 		t.Errorf("expected Signer to replace URL placeholder, got URL: %s", receivedURL)
 	}
 
-	// 验证 Payload 的 JSON 序列化 (由底层 apigo.cc/go/http 处理)
+	// 验证 Payload 的 JSON 序列化 (由底层 github.com/api-go/http 处理)
 	var bodyMap map[string]any
 	json.Unmarshal(receivedBody, &bodyMap)
 	if bodyMap["name"] != "Alice" || bodyMap["appId"] != "inject-app-id" {

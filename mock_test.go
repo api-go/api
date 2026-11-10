@@ -1,7 +1,7 @@
 package api_test
 
 import (
-	"apigo.cc/go/api"
+	"github.com/api-go/api"
 	"context"
 	"errors"
 	"net/http"

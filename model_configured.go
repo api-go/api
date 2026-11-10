@@ -3,7 +3,7 @@ package api
 import (
 	"strings"
 
-	"apigo.cc/go/cast"
+	"github.com/api-go/cast"
 )
 
 // ModelConfigured checks a dynamic model Action without making a request or

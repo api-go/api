@@ -3,7 +3,7 @@ package api
 import (
 	"testing"
 
-	"apigo.cc/go/jsmod"
+	"github.com/api-go/jsmod"
 )
 
 func TestProjectDataResult(t *testing.T) {

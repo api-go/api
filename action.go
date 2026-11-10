@@ -6,8 +6,8 @@ import (
 	"sync"
 	"unsafe"
 
-	"apigo.cc/go/cast"
-	"apigo.cc/go/safe"
+	"github.com/api-go/cast"
+	"github.com/api-go/safe"
 )
 
 // Action 是所有接口的基础标识接口

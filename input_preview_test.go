@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	"apigo.cc/go/api"
-	"apigo.cc/go/log"
+	"github.com/api-go/api"
+	"github.com/api-go/log"
 )
 
 func TestInputPreviewIsOptInAndUnicodeBounded(t *testing.T) {

@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"apigo.cc/go/log"
+	"github.com/api-go/log"
 )
 
 // CallOptions controls one API invocation without changing the stored Action.

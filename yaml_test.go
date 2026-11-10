@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"apigo.cc/go/api"
+	"github.com/api-go/api"
 )
 
 func TestParseActionYAML(t *testing.T) {

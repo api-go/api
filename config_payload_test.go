@@ -6,8 +6,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"apigo.cc/go/api"
-	"apigo.cc/go/cast"
+	"github.com/api-go/api"
+	"github.com/api-go/cast"
 )
 
 func TestDynamicConfigurationDoesNotBecomeProviderPayload(t *testing.T) {

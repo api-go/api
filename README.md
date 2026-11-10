@@ -26,7 +26,7 @@
 ## 📦 安装
 
 ```bash
-go get apigo.cc/go/api
+go get github.com/api-go/api
 ```
 
 ## 💡 核心流程

@@ -8,8 +8,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"apigo.cc/go/jsmod"
-	"apigo.cc/go/safe"
+	"github.com/api-go/jsmod"
+	"github.com/api-go/safe"
 )
 
 type testProtectedResolver struct{ value *safe.SafeBuf }

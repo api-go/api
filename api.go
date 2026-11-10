@@ -5,9 +5,9 @@ import (
 	"reflect"
 	"strings"
 
-	"apigo.cc/go/cast"
-	"apigo.cc/go/http"
-	"apigo.cc/go/safe"
+	"github.com/api-go/cast"
+	"github.com/api-go/http"
+	"github.com/api-go/safe"
 )
 
 // Call 是调度引擎的入口

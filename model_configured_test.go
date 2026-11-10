@@ -3,7 +3,7 @@ package api_test
 import (
 	"testing"
 
-	"apigo.cc/go/api"
+	"github.com/api-go/api"
 )
 
 func TestModelConfiguredUsesEffectiveActionWithoutCallingProvider(t *testing.T) {

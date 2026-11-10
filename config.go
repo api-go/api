@@ -6,11 +6,11 @@ import (
 	"strings"
 	"sync"
 
-	"apigo.cc/go/cast"
-	"apigo.cc/go/config"
-	"apigo.cc/go/crypto"
-	"apigo.cc/go/encoding"
-	"apigo.cc/go/safe"
+	"github.com/api-go/cast"
+	"github.com/api-go/config"
+	"github.com/api-go/crypto"
+	"github.com/api-go/encoding"
+	"github.com/api-go/safe"
 )
 
 var confAES *crypto.Symmetric

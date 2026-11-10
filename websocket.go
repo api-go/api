@@ -11,9 +11,9 @@ import (
 	"sync"
 	"time"
 
-	"apigo.cc/go/cast"
-	"apigo.cc/go/crypto"
-	gohttp "apigo.cc/go/http"
+	"github.com/api-go/cast"
+	"github.com/api-go/crypto"
+	gohttp "github.com/api-go/http"
 )
 
 const defaultWebSocketIdleTimeout = time.Minute

@@ -7,9 +7,9 @@ import (
 	"strings"
 	"time"
 
-	"apigo.cc/go/cast"
-	"apigo.cc/go/log"
-	"apigo.cc/go/safe"
+	"github.com/api-go/cast"
+	"github.com/api-go/log"
+	"github.com/api-go/safe"
 )
 
 const logTypeAPICall = "api_call"

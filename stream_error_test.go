@@ -7,7 +7,7 @@ import (
 	"reflect"
 	"testing"
 
-	"apigo.cc/go/api"
+	"github.com/api-go/api"
 )
 
 func TestStreamingHTTPFailureRunsResponseFilters(t *testing.T) {

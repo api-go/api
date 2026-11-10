@@ -5,8 +5,8 @@ import (
 	"sort"
 	"strings"
 
-	"apigo.cc/go/cast"
-	"apigo.cc/go/safe"
+	"github.com/api-go/cast"
+	"github.com/api-go/safe"
 )
 
 // GetStringOrSafe 从配置中安全地获取字符串值。如果是 SafeBuf，则返回明文副本及对应的清理函数

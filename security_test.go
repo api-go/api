@@ -4,8 +4,8 @@ import (
 	"strings"
 	"testing"
 
-	"apigo.cc/go/encoding"
-	"apigo.cc/go/safe"
+	"github.com/api-go/encoding"
+	"github.com/api-go/safe"
 )
 
 func TestSafeConfigDecryption(t *testing.T) {

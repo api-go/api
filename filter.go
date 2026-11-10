@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"sync"
 
-	"apigo.cc/go/cast"
+	"github.com/api-go/cast"
 )
 
 // Filter transforms one request or response event. Implementations must be stateless;

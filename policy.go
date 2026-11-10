@@ -6,8 +6,8 @@ import (
 	"reflect"
 	"strings"
 
-	"apigo.cc/go/cast"
-	"apigo.cc/go/safe"
+	"github.com/api-go/cast"
+	"github.com/api-go/safe"
 )
 
 var overrideBlacklist = map[string]bool{

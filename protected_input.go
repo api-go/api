@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"strings"
 
-	"apigo.cc/go/cast"
-	"apigo.cc/go/jsmod"
-	"apigo.cc/go/safe"
+	"github.com/api-go/cast"
+	"github.com/api-go/jsmod"
+	"github.com/api-go/safe"
 )
 
 // ProtectedValuesContextKey identifies the request-scoped protected-value resolver.

@@ -12,9 +12,9 @@ import (
 	"strings"
 	"time"
 
-	"apigo.cc/go/cast"
-	gohttp "apigo.cc/go/http"
-	"apigo.cc/go/safe"
+	"github.com/api-go/cast"
+	gohttp "github.com/api-go/http"
+	"github.com/api-go/safe"
 )
 
 // Call invokes an Action and returns the common API result envelope.

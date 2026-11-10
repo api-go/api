@@ -5,7 +5,7 @@ import (
 	"errors"
 	"sync"
 
-	"apigo.cc/go/safe"
+	"github.com/api-go/safe"
 )
 
 // Signer 负责为请求附加签名信息
