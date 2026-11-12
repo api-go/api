@@ -1,9 +1,10 @@
 package api_test
 
 import (
+	"bytes"
+	"context"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -25,7 +26,9 @@ func TestInputPreviewIsOptInAndUnicodeBounded(t *testing.T) {
 		if err != nil || !result.Ok {
 			t.Fatalf("call: %v %v", result, err)
 		}
-		data, err := os.ReadFile(path)
+		var restored bytes.Buffer
+		err = log.QueryFile(context.Background(), path+".gz", &restored, log.QueryOptions{Raw: true})
+		data := restored.Bytes()
 		if err != nil {
 			t.Fatal(err)
 		}
