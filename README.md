@@ -126,3 +126,7 @@ Action 只使用 `filters: ["name"]` 这一种形式。Filter 采用中间件包
 ### Release v1.5.23 — 2026-11-12
 
 Released GitHub dependencies; no local development replacements. Full tests and benchmarks validated with GOWORK=off.
+
+v1.5.24: dependency alignment with safe v1.5.6 / crypto v1.5.11. Development uses explicit local replacements; remove before release. Public API unchanged.
+
+Release v1.5.24: verified with published dependencies and GOWORK=off; all temporary replacements have been removed. Earlier development-validation notes describe historical local checks.
